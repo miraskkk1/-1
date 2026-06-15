@@ -12,15 +12,16 @@ ymaps.ready(initYandexMap);
 
 function initYandexMap() {
     myMap = new ymaps.Map("map", {
-        center: [43.2389, 76.8897], // Алматы
+        center: [43.2389, 76.8897], // Координаты центра Алматы
         zoom: 11,
         controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
     });
 
+    // Создаем коллекцию для геообъектов, чтобы легко обновлять их при фильтрации
     geoObjectsCollection = new ymaps.GeoObjectCollection();
     myMap.geoObjects.add(geoObjectsCollection);
 
-    // Вешаем слушатели на элементы фильтрации
+    // Слушатели событий для фильтрации и поиска в реальном времени
     document.getElementById("searchQuery").addEventListener("input", renderApp);
     document.getElementById("filterStatus").addEventListener("change", renderApp);
     document.getElementById("filterType").addEventListener("change", renderApp);
@@ -30,7 +31,7 @@ function initYandexMap() {
 }
 
 // ==========================================
-// 2. АВТОРИЗАЦИЯ С СЕРВЕРА через fetch (JWT)
+// 2. СЛОЖНАЯ АВТОРИЗАЦИЯ С СЕРВЕРА через fetch (JWT)
 // ==========================================
 
 function openAuthModal() {
@@ -58,6 +59,7 @@ async function handleBackendLogin(event) {
         const data = await response.json();
 
         if (data.success) {
+            // Исправлено: сохраняем токен в localStorage
             localStorage.setItem("jwtToken", data.token);
             closeAuthModal();
             updateUIForAuth(data.role, data.profile);
@@ -87,12 +89,11 @@ async function checkBackendSession() {
             localStorage.removeItem("jwtToken");
         }
     } catch (err) {
-        console.error("Ошибка проверки сессии:", err);
+        console.error("Ошибка автоматической проверки сессии:", err);
     }
 }
 
 function updateUIForAuth(role, profile) {
-    // Меняем кнопку Войти на Выйти
     const authSection = document.getElementById("authSection");
     authSection.innerHTML = `
         <button onclick="handleLogout()" class="bg-red-600 text-white px-4 py-1.5 rounded-full font-medium hover:bg-red-700 text-sm shadow-sm transition">
@@ -100,7 +101,6 @@ function updateUIForAuth(role, profile) {
         </button>
     `;
 
-    // Активируем кабинет модератора, если зашел админ
     const adminBtn = document.getElementById("adminPanelBtn");
     if (role === 'moderator') {
         adminBtn.classList.remove("text-gray-400", "opacity-40", "cursor-not-allowed");
@@ -108,7 +108,6 @@ function updateUIForAuth(role, profile) {
         adminBtn.innerText = "⚙️ Панель модератора (Активна)";
     }
 
-    // Заполняем дашборд профиля
     const profileDashboard = document.getElementById("profileDashboard");
     const grid = document.getElementById("profileDetailsGrid");
     profileDashboard.classList.remove("hidden");
@@ -135,7 +134,7 @@ function renderApp() {
     const filterStatus = document.getElementById("filterStatus").value;
     const filterType = document.getElementById("filterType").value;
 
-    // Фильтруем массив initialSources (из data.js)
+    // Фильтруем массив initialSources, объявленный в data.js
     const filtered = initialSources.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(query) || 
                               item.district.toLowerCase().includes(query) ||
@@ -180,6 +179,7 @@ function renderList(items) {
 function renderMapMarkers(items) {
     if (!myMap || !geoObjectsCollection) return;
 
+    // Очищаем старые метки перед новой отрисовкой
     geoObjectsCollection.removeAll();
 
     items.forEach(item => {
@@ -196,6 +196,7 @@ function renderMapMarkers(items) {
             preset: presetColor
         });
 
+        // Связываем клик по метке на карте с выбором источника в интерфейсе
         placemark.events.add('click', () => {
             selectSource(item.id);
         });
@@ -207,24 +208,15 @@ function renderMapMarkers(items) {
 function selectSource(id) {
     currentSelectedId = id;
     
-    // Обновляем активный класс в списке
-    const query = document.getElementById("searchQuery").value.toLowerCase();
-    const filterStatus = document.getElementById("filterStatus").value;
-    const filterType = document.getElementById("filterType").value;
-    const filtered = initialSources.filter(item => {
-        return (item.name.toLowerCase().includes(query) || item.district.toLowerCase().includes(query)) &&
-               (filterStatus === "all" || item.status === filterStatus) &&
-               (filterType === "all" || item.type === filterType);
-    });
-    renderList(filtered);
+    // Перерисовываем список, чтобы подсветить активный элемент синей рамкой
+    renderApp();
 
     const item = initialSources.find(s => s.id === id);
     if (!item) return;
 
-    // Центрируем карту на выбранном источнике
+    // Плавно перемещаем карту к выбранной точке
     myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
 
-    // Отрисовываем паспорт физико-химических данных
     const detailsCard = document.getElementById("detailsCard");
     const placeholder = document.getElementById("noSelectPlaceholder");
 
