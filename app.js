@@ -63,16 +63,37 @@ async function loadPointsFromServer() {
 }
 
 // ==========================================
-// 3. АВТОРИЗАЦИЯ JWT И СЕССИИ
+// 3. АВТОРИЗАЦИЯ, РЕГИСТРАЦИЯ И СЕССИИ
 // ==========================================
 
 // Открытие / Закрытие модальных окон
-function openAuthModal() { document.getElementById("authModal").classList.remove("hidden"); }
-function closeAuthModal() { document.getElementById("authModal").classList.add("hidden"); }
+function openAuthModal() { 
+    document.getElementById("authModal").classList.remove("hidden"); 
+    toggleToLogin(); // Всегда открываем на форме входа по умолчанию
+}
+function closeAuthModal() { 
+    document.getElementById("authModal").classList.add("hidden"); 
+}
 function openAddPointModal() { document.getElementById("addPointModal").classList.remove("hidden"); }
 function closeAddPointModal() { document.getElementById("addPointModal").classList.add("hidden"); }
 function openAdminModal() { document.getElementById("adminModal").classList.remove("hidden"); renderModerationQueue(); }
 function closeAdminModal() { document.getElementById("adminModal").classList.add("hidden"); }
+
+// Переключение интерфейса модалки на РЕГИСТРАЦИЮ
+function toggleToRegister() {
+    document.getElementById("authModalTitle").innerText = "Регистрация в системе";
+    document.getElementById("loginFormSubmits").classList.add("hidden");
+    document.getElementById("registerFormSubmits").classList.remove("hidden");
+    document.getElementById("loginError").classList.add("hidden");
+}
+
+// Переключение интерфейса модалки на ВХОД
+function toggleToLogin() {
+    document.getElementById("authModalTitle").innerText = "Авторизация";
+    document.getElementById("loginFormSubmits").classList.remove("hidden");
+    document.getElementById("registerFormSubmits").classList.add("hidden");
+    document.getElementById("loginError").classList.add("hidden");
+}
 
 // Функция входа (Login)
 async function handleBackendLogin(event) {
@@ -100,6 +121,40 @@ async function handleBackendLogin(event) {
         }
     } catch (err) {
         console.error("Ошибка сети при авторизации:", err);
+    }
+}
+
+// Функция регистрации нового исследователя (Register)
+async function handleBackendRegister(event) {
+    event.preventDefault();
+    const username = document.getElementById("loginUsername").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    const errorBlock = document.getElementById("loginError");
+
+    if (!username || !password) {
+        errorBlock.innerText = "Заполните логин и пароль";
+        errorBlock.classList.remove("hidden");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert("Регистрация успешна! Теперь вы можете войти.");
+            toggleToLogin(); // Возвращаем на форму ввода для авторизации
+        } else {
+            errorBlock.innerText = data.message || "Ошибка регистрации";
+            errorBlock.classList.remove("hidden");
+        }
+    } catch (err) {
+        console.error("Ошибка сети при регистрации:", err);
     }
 }
 
