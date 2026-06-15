@@ -113,7 +113,20 @@
                 <input type="text" id="addName" required placeholder="Название (например: Родник «Кок-Тобе»)" class="w-full p-2 border rounded-md" />
                 <div class="grid grid-cols-2 gap-2">
                     <select id="addType" class="w-full p-2 border rounded-md"><option value="Родник">Родник</option><option value="Колонка">Колонка</option><option value="Скважина">Скважина</option><option value="Минеральный">Минеральный</option></select>
-                    <select id="addDistrict" class="w-full p-2 border rounded-md"><option value="Медеуский район">Медеуский район</option><option value="Бостандыкский район">Бостандыкский район</option><option value="Алмалинский район">Алмалинский район</option></select>
+                    <!-- Заменяем <select id="addDistrict"> на этот блок -->
+<div class="relative w-full">
+    <input type="text" id="addDistrict" readonly placeholder="Выберите район" 
+           onclick="toggleDropdown()" 
+           class="w-full p-2 border rounded-md cursor-pointer bg-white" />
+    
+    <div id="districtDropdown" class="hidden absolute top-full left-0 w-full bg-white border rounded-md shadow-lg mt-1 z-50">
+        <div onclick="selectDistrict('Медеуский район')" class="p-2 hover:bg-blue-50 cursor-pointer text-xs">Медеуский район</div>
+        <div onclick="selectDistrict('Бостандыкский район')" class="p-2 hover:bg-blue-50 cursor-pointer text-xs">Бостандыкский район</div>
+        <div onclick="selectDistrict('Алмалинский район')" class="p-2 hover:bg-blue-50 cursor-pointer text-xs">Алмалинский район</div>
+        <div onclick="selectDistrict('Ауэзовский район')" class="p-2 hover:bg-blue-50 cursor-pointer text-xs">Ауэзовский район</div>
+        <div onclick="selectDistrict('Наурызбайский район')" class="p-2 hover:bg-blue-50 cursor-pointer text-xs">Наурызбайский район</div>
+    </div>
+</div>
                 </div>
                 <input type="text" id="addLocation" required placeholder="Точный адрес / Описание проезда" class="w-full p-2 border rounded-md" />
                 <div class="grid grid-cols-2 gap-2">
