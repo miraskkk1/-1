@@ -158,7 +158,6 @@ function selectSource(id) {
             </div>
         `;
         
-        // Автоматический фокус и зум карты на выбранную гео-точку
         myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
     }
 }
@@ -194,7 +193,7 @@ async function handleCreatePoint(event) {
         if (response.ok) {
             alert("Заявка успешно отправлена! Точка появится на общей карте сразу после подтверждения модератором.");
             closeAddPointModal();
-            await loadPointsFromServer(); // Перечитываем базу
+            await loadPointsFromServer();
         } else {
             alert("Ошибка сохранения данных сервером.");
         }
@@ -278,7 +277,6 @@ async function handleBackendRegister() {
 function handleAuthSuccess(data) {
     currentUserProfile = data.profile;
     
-    // Перерисовываем блок логина в шапке
     document.getElementById("authSection").innerHTML = `
         <div class="flex items-center gap-2">
             <span class="text-xs bg-slate-800 border border-blue-400 text-cyan-300 px-2 py-1 rounded-md font-mono">👤 ${currentUserProfile["ФИО"]}</span>
@@ -286,7 +284,6 @@ function handleAuthSuccess(data) {
         </div>
     `;
 
-    // Заполняем и открываем электронный паспорт
     const dashboard = document.getElementById("profileDashboard");
     const grid = document.getElementById("profileDetailsGrid");
     if (dashboard && grid) {
@@ -299,7 +296,6 @@ function handleAuthSuccess(data) {
         `).join('');
     }
 
-    // Активируем кнопку кабинета, если вошел аккаунт с правами модератора
     if (data.role === 'moderator') {
         const btn = document.getElementById("adminPanelBtn");
         if (btn) {
@@ -326,7 +322,6 @@ function renderModerationQueue() {
     const queueContainer = document.getElementById("moderationQueueList");
     if (!queueContainer) return;
 
-    // Ищем точки со статусом "checking"
     const checkingPoints = loadedSources.filter(item => item.status === "checking");
 
     if (checkingPoints.length === 0) {
@@ -374,13 +369,47 @@ async function moderatePointInCabinet(id, status) {
         
         if (response.ok) {
             alert(`Статус точки успешно обновлен: ${status === 'suitable' ? 'Подходит' : 'Не подходит'}`);
-            await loadPointsFromServer(); // Перечитываем новые данные
-            renderModerationQueue();      // Обновляем список в открытом кабинете
+            await loadPointsFromServer();
+            renderModerationQueue();
         } else {
             alert("Сервер отклонил операцию модерации.");
         }
     } catch (err) {
         console.error("Ошибка при модерации источника:", err);
+    }
+}
+
+// ФУНКЦИЯ ДЛЯ НАЗНАЧЕНИЯ НОВОГО МОДЕРАТОРА
+async function handleAssignModerator() {
+    const usernameInput = document.getElementById("assignUsername");
+    const username = usernameInput.value.trim();
+    const token = localStorage.getItem("token");
+
+    if (!username) {
+        alert("Пожалуйста, введите логин лаборанта.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/assign-moderator`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ username })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Пользователь ${username} успешно повышен до уровня Модератора/Администратора!`);
+            usernameInput.value = ""; // Очищаем поле ввода
+        } else {
+            alert(data.message || "Не удалось назначить модератора.");
+        }
+    } catch (err) {
+        console.error("Ошибка сети при изменении роли:", err);
+        alert("Ошибка связи с бэкенд сервером.");
     }
 }
 
