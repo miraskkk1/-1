@@ -181,3 +181,137 @@ document.getElementById('filterType').addEventListener('change', renderApp);
 
 // Первый запуск приложения при загрузке страницы
 window.onload = renderApp;
+let map;
+let markers = [];
+let currentSelectedId = null;
+
+// Инициализация Google Maps
+function initMap() {
+    // Центрируем карту на Алматы
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 43.2389, lng: 76.8897 },
+        zoom: 11,
+        mapId: "DEMO_MAP_ID" // Можно заменить на свой стиль из Google Console
+    });
+
+    renderApp();
+}
+
+// Отрисовка приложения, фильтров и маркеров
+function renderApp() {
+    const query = document.getElementById('searchQuery').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+    const typeFilter = document.getElementById('filterType').value;
+
+    // Фильтруем массив initialSources из data.js
+    const filtered = initialSources.filter(source => {
+        const matchesSearch = source.name.toLowerCase().includes(query) || 
+                              source.district.toLowerCase().includes(query) ||
+                              source.location.toLowerCase().includes(query);
+        const matchesStatus = statusFilter === 'all' || source.status === statusFilter;
+        const matchesType = typeFilter === 'all' || source.type === typeFilter;
+        return matchesSearch && matchesStatus && matchesType;
+    });
+
+    // Удаляем старые маркеры с карты Google
+    markers.forEach(marker => marker.setMap(null));
+    markers = [];
+
+    // Очищаем боковой список
+    const listContainer = document.getElementById('sourcesList');
+    listContainer.innerHTML = '';
+
+    // Добавляем новые маркеры и элементы списка
+    filtered.forEach(source => {
+        let color = 'blue';
+        if (source.status === 'suitable') color = 'green';
+        if (source.status === 'checking') color = 'orange';
+        if (source.status === 'unsuitable') color = 'red';
+
+        // Создаем маркер Google Maps
+        const marker = new google.maps.Marker({
+            position: { lat: source.lat, lng: source.lng },
+            map: map,
+            title: source.name,
+            icon: {
+                url: `http://maps.google.com/mapfiles/ms/icons/${color}-dot.png`
+            }
+        });
+
+        // Клик по маркеру открывает карточку
+        marker.addListener("click", () => {
+            selectSource(source.id);
+        });
+
+        markers.push(marker);
+
+        // Карточка в списке слева
+        const item = document.createElement('div');
+        item.className = `p-3 border rounded-lg cursor-pointer transition flex justify-between items-center ${currentSelectedId === source.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`;
+        item.innerHTML = `
+            <div>
+                <h4 class="font-bold text-sm text-gray-800">${source.name}</h4>
+                <p class="text-xs text-gray-500">${source.district} • ${source.type}</p>
+            </div>
+            <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${color}"></span>
+        `;
+        item.onclick = () => {
+            selectSource(source.id);
+            map.setCenter({ lat: source.lat, lng: source.lng });
+            map.setZoom(14);
+        };
+        listContainer.appendChild(item);
+    });
+}
+
+// Показ деталей источника
+function selectSource(id) {
+    currentSelectedId = id;
+    const source = initialSources.find(s => s.id === id);
+    if (!source) return;
+
+    document.getElementById('noSelectPlaceholder').classList.add('hidden');
+    const detailsCard = document.getElementById('detailsCard');
+    detailsCard.classList.remove('hidden');
+
+    let statusText = '';
+    if (source.status === 'suitable') {
+        statusText = `<div class="bg-green-100 text-green-800 p-2.5 rounded-lg font-bold text-xs text-center border border-green-200">✅ Подходит для получения живой и мёртвой воды методом электролиза.</div>`;
+    } else if (source.status === 'checking') {
+        statusText = `<div class="bg-yellow-100 text-yellow-800 p-2.5 rounded-lg font-bold text-xs text-center border border-yellow-200">⚠️ Статус уточняется. Требуется повторный анализ лаборатории.</div>`;
+    } else {
+        statusText = `<div class="bg-red-100 text-red-800 p-2.5 rounded-lg font-bold text-xs text-center border border-red-200">❌ Не рекомендуется для электролиза! Повышенные примеси.</div>`;
+    }
+
+    detailsCard.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <span class="text-xs font-bold tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase">${source.type}</span>
+                <h3 class="text-xl font-bold text-gray-800 mt-2">${source.name}</h3>
+                <p class="text-sm text-gray-600 mt-1">📍 ${source.region}, ${source.district}, ${source.location}</p>
+                <p class="text-xs text-gray-400 mt-1">🌐 Координаты: ${source.lat}, ${source.lng}</p>
+            </div>
+            <div class="flex flex-col justify-between bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                <div>
+                    <h4 class="font-bold text-sm text-gray-700 mb-2">📊 Лабораторные замеры:</h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                        <div class="bg-white p-2 rounded shadow-xs"><strong>pH:</strong> ${source.ph}</div>
+                        <div class="bg-white p-2 rounded shadow-xs"><strong>Минералы:</strong> ${source.mineralization} мг/л</div>
+                        <div class="bg-white p-2 rounded shadow-xs"><strong>Проводимость:</strong> ${source.conductivity} мкСм</div>
+                        <div class="bg-white p-2 rounded shadow-xs"><strong>Жесткость:</strong> ${source.hardness} °Ж</div>
+                    </div>
+                </div>
+                ${statusText}
+            </div>
+        </div>
+    `;
+    renderApp();
+}
+
+// Привязка событий к фильтрам
+document.getElementById('searchQuery').addEventListener('input', renderApp);
+document.getElementById('filterStatus').addEventListener('change', renderApp);
+document.getElementById('filterType').addEventListener('change', renderApp);
+
+// Привязываем инициализацию карты к глобальному окну
+window.initMap = initMap;
