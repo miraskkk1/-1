@@ -2,22 +2,22 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
-const app = express();
+const app = express(); // Сначала объявляем app!
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'SUPER_SECRET_KEY_KAZAKHSTAN_2026'; 
 
 app.use(cors()); 
 app.use(express.json());
 
-// 1. БАЗА ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ (В памяти сервера)
+// 1. ИМИТАЦИЯ БАЗЫ ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ
 const usersDatabase = {
     "admin": {
-        username: "mirasknly",
-        password: "kanatuly", 
+        username: "admin",
+        password: "123", 
         role: "moderator",
         profile: {
             "ФИО": "Канатулы Мирас",
-            "Статус": "ИС-2506",
+            "Статус": "PhD в области электротехники",
             "ВУЗ": "МУИТ (IITU)",
             "Лаборатория": "Гидро-электролиз Юткина",
             "Доступ": "Администратор (Полный доступ)"
@@ -25,8 +25,7 @@ const usersDatabase = {
     }
 };
 
-// 2. СТАТИЧЕСКАЯ БАЗА ДАННЫХ ИСТОЧНИКОВ (Реальные координаты + 42 зафиксированные точки)
-// Теперь они никогда не изменятся случайным образом!
+// 2. СТАТИЧЕСКАЯ БАЗА ДАННЫХ ИСТОЧНИКОВ (Первые 8 точек — реальные локации)
 const waterSourcesDatabase = [
   { id: 1, name: "Родник «Акбулак» (Медеу)", type: "Родник", region: "Алматы", district: "Медеуский район", location: "ул. Керей-Жанибек хандар, выше экопоста", lat: 43.1945, lng: 77.0142, status: "suitable", ph: 7.4, mineralization: 180, conductivity: 250, hardness: 3.2, temp: 8, impurities: "Отсутствуют", author: "Канатулы М.", date: "2026-05-10" },
   { id: 2, name: "Алма-Арасанский термальный источник", type: "Минеральный", region: "Алматы", district: "Бостандыкский район", location: "Ущелье Алма-Арасан, возле речки", lat: 43.1114, lng: 76.9048, status: "suitable", ph: 8.2, mineralization: 320, conductivity: 410, hardness: 1.8, temp: 21, impurities: "Сероводород (микро)", author: "Иванов А.П.", date: "2026-05-12" },
@@ -38,17 +37,17 @@ const waterSourcesDatabase = [
   { id: 8, name: "Скважина «Ремизовка»", type: "Скважина", region: "Алматы", district: "Бостандыкский район", location: "пер. Веселый, частный сектор", lat: 43.1640, lng: 76.9280, status: "unsuitable", ph: 6.2, mineralization: 550, conductivity: 790, hardness: 8.2, temp: 10, impurities: "Кальциты, железо", author: "Алиева Д.Р.", date: "2026-06-03" }
 ];
 
-// Автоматически генерируем остальные точки до 50 штук, но СТРОГО один раз при запуске бэкенда!
-// Локации привязаны к сетке шагов, поэтому прыгать при обновлении страницы они больше не будут.
-const types = ["Родник", "Колонка", "Скважина", "Минеральный", "Артезианские"];
+const types = ["Родник", "Колонка", "Скважина", "Минеральный", "Артезианский"];
 const statuses = ["suitable", "checking", "unsuitable"];
-const districts = ["Медеуский район", "Бостандыкский район", "Турксибский район", "Ауэзовский район", "Наурызбайский район", "Илийский район"];
+const districts = ["Медеуский район", "Бостандыкский район", "Турксибский район", "Ауэзовский район", "Наурызбайский район", "Алмалинский район"];
 
+// Красивое математическое распределение точек вокруг Алматы с помощью тригонометрии 
+// Значения жестко привязаны к ID, поэтому они НЕ меняются при обновлении страницы, но распределены хаотично
 if (waterSourcesDatabase.length < 50) {
     for (let i = 9; i <= 50; i++) {
-        // Фиксированная сетка шагов вместо Math.random()
-        const latStep = (i * 0.0043) % 0.15;
-        const lngStep = (i * 0.0057) % 0.22;
+        // Используем синус и косинус для кругового распределения от центра Алматы
+        const radiusLat = 0.06 * Math.sin(i * 1.7); 
+        const radiusLng = 0.09 * Math.cos(i * 2.3); 
         
         waterSourcesDatabase.push({
             id: i,
@@ -57,8 +56,8 @@ if (waterSourcesDatabase.length < 50) {
             region: "Алматы",
             district: districts[i % 6],
             location: `Улица Инженерная, сектор замера №${i * 2}`,
-            lat: parseFloat((43.18 + latStep).toFixed(4)),
-            lng: parseFloat((76.82 + lngStep).toFixed(4)),
+            lat: parseFloat((43.22 + radiusLat).toFixed(4)),
+            lng: parseFloat((76.89 + radiusLng).toFixed(4)),
             status: statuses[i % 3],
             ph: (6.5 + (i % 4) * 0.4).toFixed(1),
             mineralization: 150 + (i * 7),
@@ -72,12 +71,11 @@ if (waterSourcesDatabase.length < 50) {
     }
 }
 
-// МАРШРУТ ПОЛУЧЕНИЯ ВСЕХ ТОЧЕК ДЛЯ КАРТЫ
+// МАРШРУТЫ API
 app.get('/api/sources', (req, res) => {
     res.json(waterSourcesDatabase);
 });
 
-// МАРШРУТ РЕГИСТРАЦИИ СТУДЕНТА
 app.post('/api/auth/register', (req, res) => {
     const { username, password, fio, age, university, specialty, course } = req.body;
     if (!username || !password || !fio || !university) {
@@ -100,7 +98,6 @@ app.post('/api/auth/register', (req, res) => {
     return res.json({ success: true, message: "Регистрация успешна" });
 });
 
-// МАРШРУТ АВТОРИЗАЦИИ (LOGIN)
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
     const user = usersDatabase[username?.toLowerCase()];
@@ -112,7 +109,6 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ success: false, message: "Неверный логин или пароль" });
 });
 
-// ЗАЩИЩЕННЫЙ МАРШРУТ ПРОВЕРКИ ТОКЕНА
 app.get('/api/auth/me', (req, res) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
