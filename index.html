@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <style>
-        #map { height: 480px; width: 100%; border-radius: 0.75rem; }
+        #map { height: 460px; width: 100%; border-radius: 0.75rem; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
@@ -18,29 +18,30 @@
                 <h1 class="text-2xl font-bold tracking-wide">💧 ГИДРО-КАРТА КАЗАХСТАНА</h1>
                 <p class="text-xs text-blue-100 mt-1">Интерактивный анализ природных источников для электролиза Юткина</p>
             </div>
-            <div class="flex items-center gap-3" id="globalMenuZone">
-                <button id="adminPanelBtn" class="bg-blue-800 text-gray-400 px-3 py-1.5 text-xs font-semibold rounded-md transition opacity-40 cursor-not-allowed">
+            <div class="flex items-center gap-3">
+                <button onclick="openAddPointModal()" class="bg-emerald-600 text-white px-3 py-1.5 text-xs font-semibold rounded-md hover:bg-emerald-700 transition cursor-pointer">
+                    ➕ Добавить точку
+                </button>
+                <button id="adminPanelBtn" onclick="openAdminModal()" class="bg-blue-900 text-gray-400 px-3 py-1.5 text-xs font-semibold rounded-md transition opacity-45 cursor-not-allowed" disabled>
                     ⚙️ Кабинет модератора
                 </button>
                 <div id="authSection">
-                    <button onclick="openAuthModal()" class="bg-white text-blue-700 px-4 py-1.5 rounded-full font-medium hover:bg-blue-50 text-sm shadow-sm transition">
-                        Войти / Регистрация
-                    </button>
+                    <button onclick="openAuthModal()" class="bg-white text-blue-700 px-4 py-1.5 rounded-full font-medium hover:bg-blue-50 text-sm shadow-sm transition cursor-pointer">Войти / Регистрация</button>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- Личный кабинет -->
     <div id="profileDashboard" class="container mx-auto mt-4 px-4 hidden">
         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-xs">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-600">Электронный паспорт исследователя (Данные с бэкенда):</h3>
-            <div id="profileDetailsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-2 text-xs text-gray-700">
-                </div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-600">Электронный паспорт исследователя:</h3>
+            <div id="profileDetailsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-2 text-xs text-gray-700"></div>
         </div>
     </div>
 
+    <!-- Главная рабочая область -->
     <main class="container mx-auto p-4 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         <div class="lg:col-span-1 flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 h-[620px]">
             <h2 class="text-lg font-bold text-gray-700 border-b pb-2">🔍 Поиск и фильтрация</h2>
             <input type="text" id="searchQuery" placeholder="Поиск по названию, району..." class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500 transition" />
@@ -48,7 +49,7 @@
             <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
                     <label class="block text-gray-500 mb-1">Статус воды</label>
-                    <select id="filterStatus" class="w-full p-2 border rounded-md bg-gray-50 outline-none focus:border-blue-500">
+                    <select id="filterStatus" class="w-full p-2 border rounded-md bg-gray-50">
                         <option value="all">Все статусы</option>
                         <option value="suitable">💚 Подходит</option>
                         <option value="checking">💛 Проверяется</option>
@@ -57,7 +58,7 @@
                 </div>
                 <div>
                     <label class="block text-gray-500 mb-1">Тип источника</label>
-                    <select id="filterType" class="w-full p-2 border rounded-md bg-gray-50 outline-none focus:border-blue-500">
+                    <select id="filterType" class="w-full p-2 border rounded-md bg-gray-50">
                         <option value="all">Все типы</option>
                         <option value="Родник">Родники</option>
                         <option value="Колонка">Колонки</option>
@@ -67,100 +68,105 @@
                     </select>
                 </div>
             </div>
-            
             <div class="mt-2 border-t pt-2 flex-grow overflow-y-auto space-y-2 pr-1" id="sourcesList"></div>
         </div>
 
         <div class="lg:col-span-2 flex flex-col gap-4">
-            <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-                <div id="map"></div>
-            </div>
-            
+            <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100"><div id="map"></div></div>
             <div id="detailsCard" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hidden"></div>
-            
             <div id="noSelectPlaceholder" class="bg-gray-100 border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500 text-sm flex-grow flex items-center justify-center">
                 👈 Выберите маркер капли на Яндекс Карте или элемент в списке слева для просмотра физико-химических показателей.
             </div>
         </div>
     </main>
 
+    <!-- МОДAЛКА: Окно входа/Регистрации -->
     <div id="authModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999] hidden">
-        <div class="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl transition-all">
-            
+        <div class="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl">
             <div class="flex border-b mb-4 text-sm font-semibold">
-                <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 pb-2 text-blue-600 border-b-2 border-blue-600 text-center cursor-pointer">Вход</button>
-                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 pb-2 text-gray-400 text-center cursor-pointer">Регистрация студента</button>
+                <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 pb-2 text-blue-600 border-b-2 border-blue-600 text-center">Вход</button>
+                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 pb-2 text-gray-400 text-center">Регистрация</button>
             </div>
-
             <div id="authMessage" class="text-xs font-medium hidden p-2.5 rounded-md mb-3"></div>
-
+            
             <form id="loginForm" onsubmit="handleBackendLogin(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">Имя пользователя (Логин)</label>
-                    <input type="text" id="loginUsername" required placeholder="Например: student2026" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">Пароль</label>
-                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500" />
-                </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg hover:bg-gray-50 cursor-pointer">Отмена</button>
-                    <button type="submit" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 cursor-pointer">Войти</button>
-                </div>
+                <input type="text" id="loginUsername" required placeholder="Имя пользователя" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
+                <input type="password" id="loginPassword" required placeholder="Пароль" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
+                <div class="flex justify-end gap-2"><button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg">Отмена</button><button type="submit" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg">Войти</button></div>
             </form>
 
             <form id="registerForm" onsubmit="handleBackendRegister(event)" class="space-y-3 hidden">
                 <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Желаемый логин *</label>
-                        <input type="text" id="regUsername" required placeholder="User123" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Пароль *</label>
-                        <input type="password" id="regPassword" required placeholder="••••••••" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
-                    </div>
+                    <input type="text" id="regUsername" required placeholder="Логин *" class="w-full p-2 border rounded-lg text-xs" />
+                    <input type="password" id="regPassword" required placeholder="Пароль *" class="w-full p-2 border rounded-lg text-xs" />
                 </div>
-
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">ФИО Студента *</label>
-                    <input type="text" id="regFio" required placeholder="Иванов Иван Иванович" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
-                </div>
-
+                <input type="text" id="regFio" required placeholder="Полное ФИО *" class="w-full p-2 border rounded-lg text-xs" />
                 <div class="grid grid-cols-3 gap-2">
-                    <div class="col-span-1">
-                        <label class="block text-xs text-gray-500 mb-1">Возраст *</label>
-                        <input type="number" id="regAge" required min="16" max="100" placeholder="20" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-xs text-gray-500 mb-1">Университет (ВУЗ) *</label>
-                        <input type="text" id="regUniversity" required placeholder="МУИТ (IITU)" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
-                    </div>
+                    <input type="number" id="regAge" required placeholder="Возраст" class="w-full p-2 border rounded-lg text-xs" />
+                    <input type="text" id="regUniversity" required placeholder="ВУЗ *" class="w-full p-2 border rounded-lg text-xs col-span-2" />
                 </div>
-
                 <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Специальность *</label>
-                        <input type="text" id="regSpecialty" required placeholder="ВТиПО / ИС / Электротехника" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Курс обучения *</label>
-                        <select id="regCourse" required class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500">
-                            <option value="1">1 курс</option>
-                            <option value="2">2 курс</option>
-                            <option value="3">3 курс</option>
-                            <option value="4">4 курс</option>
-                            <option value="Магистратура">Магистратура</option>
-                            <option value="PhD Докторантура">PhD Докторантура</option>
-                        </select>
-                    </div>
+                    <input type="text" id="regSpecialty" required placeholder="Специальность" class="w-full p-2 border rounded-lg text-xs" />
+                    <select id="regCourse" class="w-full p-2 border rounded-lg text-xs"><option value="1">1 курс</option><option value="2">2 курс</option><option value="3">3 курс</option><option value="4">4 курс</option></select>
                 </div>
-
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg hover:bg-gray-50 cursor-pointer">Отмена</button>
-                    <button type="submit" class="px-4 py-2 text-xs bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 cursor-pointer">Зарегистрироваться</button>
-                </div>
+                <div class="flex justify-end gap-2"><button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg">Отмена</button><button type="submit" class="px-4 py-2 text-xs bg-emerald-600 text-white font-bold rounded-lg">Зарегистрироваться</button></div>
             </form>
+        </div>
+    </div>
 
+    <!-- МОДАЛКА: Добавить новую точку воды -->
+    <div id="addPointModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99998] hidden">
+        <div class="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-base font-bold text-gray-800 mb-2">➕ Внести новый источник (Заявка)</h3>
+            <form onsubmit="handleCreatePoint(event)" class="space-y-3 text-xs">
+                <input type="text" id="addName" required placeholder="Название (например: Родник «Кок-Тобе»)" class="w-full p-2 border rounded-md" />
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="addType" class="w-full p-2 border rounded-md"><option value="Родник">Родник</option><option value="Колонка">Колонка</option><option value="Скважина">Скважина</option><option value="Минеральный">Минеральный</option></select>
+                    <select id="addDistrict" class="w-full p-2 border rounded-md"><option value="Медеуский район">Медеуский</option><option value="Бостандыкский район">Бостандыкский</option><option value="Ауэзовский район">Ауэзовский</option></select>
+                </div>
+                <input type="text" id="addLocation" required placeholder="Точный адрес / Описание проезда" class="w-full p-2 border rounded-md" />
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" step="0.0001" id="addLat" required placeholder="Широта (например: 43.2212)" class="w-full p-2 border rounded-md" />
+                    <input type="number" step="0.0001" id="addLng" required placeholder="Долгота (например: 76.9145)" class="w-full p-2 border rounded-md" />
+                </div>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <input type="number" step="0.1" id="addPh" required placeholder="pH" class="p-1.5 border rounded-md" />
+                    <input type="number" id="addMin" required placeholder="Минг/л" class="p-1.5 border rounded-md" />
+                    <input type="number" id="addCond" required placeholder="мкСм" class="p-1.5 border rounded-md" />
+                    <input type="number" step="0.1" id="addHard" required placeholder="Жёстк" class="p-1.5 border rounded-md" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" id="addTemp" required placeholder="Температура °C" class="w-full p-2 border rounded-md" />
+                    <input type="text" id="addImpurities" placeholder="Примеси (если есть)" class="w-full p-2 border rounded-md" />
+                </div>
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeAddPointModal()" class="px-4 py-2 text-xs border rounded-lg">Отмена</button><button type="submit" class="px-4 py-2 text-xs bg-emerald-600 text-white font-bold rounded-lg">Отправить модератору</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: ПАНЕЛЬ МОДЕРАТОРА (НОВАЯ) -->
+    <div id="adminModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999] hidden">
+        <div class="bg-white p-6 rounded-xl max-w-2xl w-full shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <h3 class="text-base font-bold text-gray-800">⚙️ Панель управления лаборантов (Модерация)</h3>
+                <button onclick="closeAdminModal()" class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer">&times;</button>
+            </div>
+
+            <!-- Блок 1: Назначение модератора -->
+            <div class="bg-gray-50 p-3 rounded-lg border mb-4 text-xs">
+                <h4 class="font-bold text-gray-700 mb-1.5">👑 Назначить нового модератора (Повышение студента)</h4>
+                <form onsubmit="handleAssignModerator(event)" class="flex gap-2">
+                    <input type="text" id="modTargetUsername" required placeholder="Введите точный логин студента" class="p-2 border rounded-md flex-grow bg-white outline-none" />
+                    <button type="submit" class="bg-blue-600 text-white font-semibold px-4 rounded-md hover:bg-blue-700 transition cursor-pointer">Повысить роль</button>
+                </form>
+                <div id="modAssignMessage" class="text-[11px] mt-1 hidden font-semibold"></div>
+            </div>
+
+            <!-- Блок 2: Список заявок на модерацию точек -->
+            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Точки воды, ожидающие верификации:</h4>
+            <div class="overflow-y-auto flex-grow space-y-2 pr-1 border rounded-lg p-2 bg-gray-50/50 text-xs" id="moderationQueueList">
+                <!-- Сюда вставляются карточки на проверку через JS -->
+            </div>
         </div>
     </div>
 
