@@ -83,16 +83,26 @@
 
     <div id="authModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999] hidden">
         <div class="bg-white p-6 rounded-xl max-w-sm w-full shadow-2xl">
-            <h3 class="text-xl font-bold text-gray-800 mb-1">🔐 Авторизация JWT</h3>
-            <form onsubmit="handleBackendLogin(event)" class="space-y-3 mt-3">
-                <input type="text" id="loginUsername" required placeholder="Логин (admin, student1)" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
-                <input type="password" id="loginPassword" required placeholder="Пароль (123)" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
+            <h3 id="authModalTitle" class="text-xl font-bold text-gray-800 mb-1">Авторизация</h3>
+            
+            <div class="space-y-3 mt-3">
+                <input type="text" id="loginUsername" placeholder="Логин" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
+                <input type="password" id="loginPassword" placeholder="Пароль" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
+                
                 <div id="loginError" class="text-xs text-red-500 font-medium hidden"></div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg">Отмена</button>
-                    <button type="submit" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg">Войти</button>
+
+                <div id="loginFormSubmits" class="space-y-2">
+                    <button onclick="handleBackendLogin(event)" class="w-full py-2 text-xs bg-blue-600 text-white font-bold rounded-lg cursor-pointer">Войти</button>
+                    <p class="text-[11px] text-gray-500 text-center">Нет аккаунта? <button onclick="toggleToRegister()" class="text-blue-600 underline cursor-pointer">Зарегистрироваться</button></p>
                 </div>
-            </form>
+
+                <div id="registerFormSubmits" class="space-y-2 hidden">
+                    <button onclick="handleBackendRegister(event)" class="w-full py-2 text-xs bg-emerald-600 text-white font-bold rounded-lg cursor-pointer">Создать аккаунт</button>
+                    <p class="text-[11px] text-gray-500 text-center">Уже есть аккаунт? <button onclick="toggleToLogin()" class="text-blue-600 underline cursor-pointer">Войти</button></p>
+                </div>
+
+                <button type="button" onclick="closeAuthModal()" class="w-full py-2 text-xs border rounded-lg mt-2 cursor-pointer">Отмена</button>
+            </div>
         </div>
     </div>
 
@@ -131,6 +141,7 @@
                 <h3 class="text-sm font-bold text-gray-800">⚙️ Панель управления (Модерация источников)</h3>
                 <button onclick="closeAdminModal()" class="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&times;</button>
             </div>
+            
             <div class="bg-gray-50 p-3 rounded-lg border mb-3 text-xs">
                 <h4 class="font-bold text-gray-700 mb-1.5">👑 Повысить права студента до Модератора</h4>
                 <form onsubmit="handleAssignModerator(event)" class="flex gap-2">
@@ -139,6 +150,7 @@
                 </form>
                 <div id="modAssignMessage" class="text-[11px] mt-1 hidden font-semibold"></div>
             </div>
+            
             <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Новые заявки на верификацию:</h4>
             <div class="overflow-y-auto flex-grow space-y-2 pr-1 border rounded-lg p-2 bg-gray-50/50" id="moderationQueueList"></div>
         </div>
