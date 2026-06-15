@@ -9,48 +9,60 @@ const JWT_SECRET = 'SUPER_SECRET_KEY_KAZAKHSTAN_2026';
 app.use(cors()); 
 app.use(express.json());
 
-// 1. ИМИТАЦИЯ БАЗЫ ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ (Поля синхронизированы с UI)
+// 1. База данных пользователей
 const usersDatabase = {
-    "miras": {
-        username: "miras",
-        password: "kanatuly", 
+    "admin": {
+        username: "admin",
+        password: "123", 
         role: "moderator",
         profile: {
             "ФИО": "Канатулы Мирас",
-            "Статус": "Krasavchik",
+            "Статус": "PhD в области электротехники",
             "ВУЗ": "МУИТ (IITU)",
             "Лаборатория": "Гидро-электролиз Юткина",
             "Доступ": "Администратор (Полный доступ)"
         }
     },
-    
+    "student1": {
+        username: "student1",
+        password: "123",
+        role: "student",
+        profile: {
+            "ФИО": "Асхат Бахытжан",
+            "ВУЗ": "МУИТ (IITU)",
+            "Специальность": "Вычислительная техника",
+            "Курс": "3 курс",
+            "Доступ": "Студент"
+        }
+    }
 };
 
-// 2. ДИНАМИЧЕСКИЙ МАССИВ ТОЧЕК НА БЭКЕНДЕ
+// Динамический массив точек
 let waterSourcesDatabase = [];
 
-// ПОЛУЧЕНИЕ ВСЕХ ТОЧЕК
+// Получение всех точек
 app.get('/api/sources', (req, res) => {
     res.json(waterSourcesDatabase);
 });
 
-// СИНХРОНИЗАЦИЯ БАЗЫ (Если на сервере пусто, фронт скинет свои базовые точки из data.js)
+// Синхронизация базы (если сервер перезагрузился и пуст)
 app.post('/api/sources/sync', (req, res) => {
     if (waterSourcesDatabase.length === 0 && Array.isArray(req.body)) {
         waterSourcesDatabase = req.body;
-        return res.json({ success: true, message: "База данных бэкенда успешно инициализирована точками!", count: waterSourcesDatabase.length });
+        return res.json({ success: true, message: "База данных успешно инициализирована", count: waterSourcesDatabase.length });
     }
     res.json({ success: true, message: "Синхронизация не требуется", count: waterSourcesDatabase.length });
 });
 
-// ДОБАВЛЕНИЕ НОВОЙ ТОЧКИ (Заявка от исследователя)
+// Добавление новой точки (заявка)
 app.post('/api/sources', (req, res) => {
     const { name, type, district, location, lat, lng, ph, mineralization, conductivity, hardness, temp, impurities, author } = req.body;
     
     const newPoint = {
         id: waterSourcesDatabase.length + 1,
         name, type, region: "Алматы", district, location,
-        lat: parseFloat(lat), lng: parseFloat(lng),
+        lat: parseFloat(lat) || 0, 
+        lng: parseFloat(lng) || 0,
         status: "checking", 
         labChecked: false,
         ph: parseFloat(ph) || 7.0, 
@@ -59,7 +71,7 @@ app.post('/api/sources', (req, res) => {
         hardness: parseFloat(hardness) || 3.0, 
         temp: parseInt(temp) || 10, 
         impurities: impurities || "Отсутствуют",
-        author: author || "Анонимный лаборант",
+        author: author || "Анонимный исследователь",
         date: new Date().toISOString().split('T')[0]
     };
 
@@ -67,7 +79,7 @@ app.post('/api/sources', (req, res) => {
     res.json({ success: true, point: newPoint });
 });
 
-// МОДЕРАЦИЯ (Одобрение или Отклонение точки)
+// Модерация (Одобрить/Отклонить)
 app.post('/api/sources/moderate', (req, res) => {
     const { id, status } = req.body;
     const point = waterSourcesDatabase.find(p => p.id === parseInt(id));
@@ -75,12 +87,12 @@ app.post('/api/sources/moderate', (req, res) => {
     if (point) {
         point.status = status; 
         point.labChecked = true;
-        return res.json({ success: true, message: `Статус точки ID ${id} изменен на ${status}` });
+        return res.json({ success: true, message: `Статус точки ID ${id} изменено на ${status}` });
     }
     res.status(404).json({ success: false, message: "Точка не найдена" });
 });
 
-// НАЗНАЧЕНИЕ НОВОГО МОДЕРАТОРА
+// Повышение прав до модератора
 app.post('/api/auth/make-moderator', (req, res) => {
     const { username } = req.body;
     const user = usersDatabase[username?.toLowerCase().trim()];
@@ -92,10 +104,10 @@ app.post('/api/auth/make-moderator', (req, res) => {
         }
         return res.json({ success: true, message: `Пользователь ${username} успешно повышен до Модератора!` });
     }
-    res.status(404).json({ success: false, message: "Пользователь с таким логином не зарегистрирован" });
+    res.status(404).json({ success: false, message: "Пользователь не зарегистрирован" });
 });
 
-// АВТЕНТИФИКАЦИЯ (ВХОД)
+// Авторизация
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
     const user = usersDatabase[username?.toLowerCase().trim()];
@@ -107,7 +119,30 @@ app.post('/api/auth/login', (req, res) => {
     res.status(401).json({ success: false, message: "Неверный логин или пароль" });
 });
 
-// ПРОВЕРКА СЕССИИ (ME)
+// Регистрация
+app.post('/api/auth/register', (req, res) => {
+    const { username, password } = req.body;
+    const cleanUsername = username.toLowerCase().trim();
+
+    if (usersDatabase[cleanUsername]) {
+        return res.status(400).json({ success: false, message: "Пользователь уже существует" });
+    }
+
+    usersDatabase[cleanUsername] = {
+        username: cleanUsername,
+        password: password,
+        role: "student",
+        profile: {
+            "ФИО": cleanUsername,
+            "Статус": "Исследователь (Студент)",
+            "Доступ": "Базовый уровень"
+        }
+    };
+
+    res.json({ success: true, message: "Регистрация прошла успешно!" });
+});
+
+// Проверка сессии
 app.get('/api/auth/me', (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; 
