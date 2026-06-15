@@ -3,13 +3,14 @@ const BACKEND_URL = "https://1-1-5hl5.onrender.com";
 let myMap;
 let currentSelectedId = null;
 let geoObjectsCollection;
+let loadedSources = []; // Массив, куда запишем точки с бэкенда
 
 // ==========================================
-// 1. ИНИЦИАЛИЗАЦИЯ ЯНДЕКС КАРТЫ
+// 1. ИНИЦИАЛИЗАЦИЯ ЯНДЕКС КАРТЫ И ЗАГРУЗКА ТОЧЕК
 // ==========================================
 ymaps.ready(initYandexMap);
 
-function initYandexMap() {
+async function initYandexMap() {
     myMap = new ymaps.Map("map", {
         center: [43.2389, 76.8897], 
         zoom: 11,
@@ -24,22 +25,33 @@ function initYandexMap() {
     document.getElementById("filterType").addEventListener("change", renderApp);
 
     checkBackendSession();
-    renderApp();
+    
+    // Загружаем постоянные точки с сервера
+    await loadPointsFromServer(); 
+}
+
+async function loadPointsFromServer() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/sources`);
+        const data = await response.json();
+        loadedSources = data; // Записываем стабильные точки
+        renderApp(); // Рисуем их
+    } catch (err) {
+        console.error("Не удалось загрузить гидро-точки:", err);
+    }
 }
 
 // ==========================================
 // 2. УПРАВЛЕНИЕ ОКНОМ АВТОРИЗАЦИИ И РЕГИСТРАЦИИ
 // ==========================================
-
 function openAuthModal() {
     document.getElementById("authModal").classList.remove("hidden");
-    switchAuthTab('login'); // Всегда открывать сначала вкладку Входа
+    switchAuthTab('login');
 }
 
 function closeAuthModal() {
     document.getElementById("authModal").classList.add("hidden");
-    const msgBlock = document.getElementById("authMessage");
-    msgBlock.classList.add("hidden");
+    document.getElementById("authMessage").classList.add("hidden");
 }
 
 function switchAuthTab(tab) {
@@ -47,9 +59,7 @@ function switchAuthTab(tab) {
     const registerForm = document.getElementById("registerForm");
     const tabLoginBtn = document.getElementById("tabLoginBtn");
     const tabRegisterBtn = document.getElementById("tabRegisterBtn");
-    const msgBlock = document.getElementById("authMessage");
-    
-    msgBlock.classList.add("hidden"); // Очистить старые ошибки
+    document.getElementById("authMessage").classList.add("hidden");
 
     if (tab === 'login') {
         loginForm.classList.remove("hidden");
@@ -64,7 +74,6 @@ function switchAuthTab(tab) {
     }
 }
 
-// ОТПРАВКА ДАННЫХ РЕГИСТРАЦИИ НА СЕРВЕР
 async function handleBackendRegister(event) {
     event.preventDefault();
     const msgBlock = document.getElementById("authMessage");
@@ -83,13 +92,10 @@ async function handleBackendRegister(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, fio, age, university, specialty, course })
         });
-
         const data = await response.json();
-
         if (data.success) {
-            msgBlock.innerText = "Регистрация успешна! Теперь войдите.";
+            msgBlock.innerText = "Регистрация успешна! Теперь выполните вход.";
             msgBlock.className = "text-xs font-medium p-2.5 rounded-md mb-3 bg-emerald-50 text-emerald-700 block";
-            // Переключаем форму на вход через 1.5 секунды
             setTimeout(() => { switchAuthTab('login'); }, 1500);
         } else {
             msgBlock.innerText = data.message || "Ошибка регистрации";
@@ -101,7 +107,6 @@ async function handleBackendRegister(event) {
     }
 }
 
-// ВХОД (LOGIN)
 async function handleBackendLogin(event) {
     event.preventDefault();
     const username = document.getElementById("loginUsername").value.trim();
@@ -114,9 +119,7 @@ async function handleBackendLogin(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
-
         const data = await response.json();
-
         if (data.success) {
             localStorage.setItem("jwtToken", data.token);
             closeAuthModal();
@@ -134,43 +137,30 @@ async function handleBackendLogin(event) {
 async function checkBackendSession() {
     const token = localStorage.getItem("jwtToken");
     if (!token) return;
-
     try {
         const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        if (data.success) {
-            updateUIForAuth(data.role, data.profile);
-        } else {
-            localStorage.removeItem("jwtToken");
-        }
-    } catch (err) {
-        console.error("Ошибка сессии:", err);
-    }
+        if (data.success) updateUIForAuth(data.role, data.profile);
+        else localStorage.removeItem("jwtToken");
+    } catch (err) { console.error("Ошибка сессии:", err); }
 }
 
 function updateUIForAuth(role, profile) {
-    const authSection = document.getElementById("authSection");
-    authSection.innerHTML = `
-        <button onclick="handleLogout()" class="bg-red-600 text-white px-4 py-1.5 rounded-full font-medium hover:bg-red-700 text-sm shadow-sm transition">
-            Выйти
-        </button>
+    document.getElementById("authSection").innerHTML = `
+        <button onclick="handleLogout()" class="bg-red-600 text-white px-4 py-1.5 rounded-full font-medium hover:bg-red-700 text-sm shadow-sm transition">Выйти</button>
     `;
-
     const adminBtn = document.getElementById("adminPanelBtn");
     if (role === 'moderator') {
         adminBtn.classList.remove("text-gray-400", "opacity-40", "cursor-not-allowed");
         adminBtn.classList.add("text-white", "hover:bg-blue-900");
         adminBtn.innerText = "⚙️ Панель модератора (Активна)";
     }
-
     const profileDashboard = document.getElementById("profileDashboard");
-    const grid = document.getElementById("profileDetailsGrid");
     profileDashboard.classList.remove("hidden");
-
-    grid.innerHTML = Object.entries(profile).map(([key, value]) => `
+    document.getElementById("profileDetailsGrid").innerHTML = Object.entries(profile).map(([key, value]) => `
         <div class="bg-white p-2 rounded-md border border-blue-100 shadow-2xs">
             <span class="font-semibold text-gray-500 uppercase text-[10px] block">${key}</span>
             <span class="text-gray-800 font-medium text-xs">${value}</span>
@@ -191,13 +181,13 @@ function renderApp() {
     const filterStatus = document.getElementById("filterStatus").value;
     const filterType = document.getElementById("filterType").value;
 
-    const filtered = initialSources.filter(item => {
+    // Работаем с данными loadedSources, загруженными из API бэкенда
+    const filtered = loadedSources.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(query) || 
                               item.district.toLowerCase().includes(query) ||
                               item.location.toLowerCase().includes(query);
         const matchesStatus = filterStatus === "all" || item.status === filterStatus;
         const matchesType = filterType === "all" || item.type === filterType;
-
         return matchesSearch && matchesStatus && matchesType;
     });
 
@@ -211,15 +201,12 @@ function renderList(items) {
         listContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Источники не найдены</p>`;
         return;
     }
-
     listContainer.innerHTML = items.map(item => {
         let statusColor = "bg-gray-400";
         if (item.status === "suitable") statusColor = "bg-emerald-500";
         if (item.status === "checking") statusColor = "bg-amber-500";
         if (item.status === "unsuitable") statusColor = "bg-rose-500";
-
         const isSelected = item.id === currentSelectedId ? 'border-blue-500 bg-blue-50/50' : 'border-gray-100 hover:bg-gray-50';
-
         return `
             <div onclick="selectSource(${item.id})" class="p-3 border rounded-lg cursor-pointer transition flex justify-between items-start gap-2 ${isSelected}">
                 <div class="space-y-1">
@@ -246,9 +233,7 @@ function renderMapMarkers(items) {
             balloonContentHeader: item.name,
             balloonContentBody: `<strong>Тип:</strong> ${item.type}<br><strong>Адрес:</strong> ${item.location}`,
             hintContent: item.name
-        }, {
-            preset: presetColor
-        });
+        }, { preset: presetColor });
 
         placemark.events.add('click', () => { selectSource(item.id); });
         geoObjectsCollection.add(placemark);
@@ -257,15 +242,13 @@ function renderMapMarkers(items) {
 
 function selectSource(id) {
     currentSelectedId = id;
-    const item = initialSources.find(s => s.id === id);
+    const item = loadedSources.find(s => s.id === id);
     if (!item) return;
 
     myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
 
     const detailsCard = document.getElementById("detailsCard");
-    const placeholder = document.getElementById("noSelectPlaceholder");
-
-    placeholder.classList.add("hidden");
+    document.getElementById("noSelectPlaceholder").classList.add("hidden");
     detailsCard.classList.remove("hidden");
 
     let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">📋 Проверяется</span>`;
@@ -290,22 +273,10 @@ function selectSource(id) {
         </div>
         <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Физико-химические показатели:</h4>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-4">
-            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span class="text-gray-400 block text-[10px]">Водородный показатель</span>
-                <span class="font-bold text-gray-700">pH ${item.ph}</span>
-            </div>
-            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span class="text-gray-400 block text-[10px]">Минерализация</span>
-                <span class="font-bold text-gray-700">${item.mineralization} мг/л</span>
-            </div>
-            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span class="text-gray-400 block text-[10px]">Электропроводность</span>
-                <span class="font-bold text-gray-700">${item.conductivity} мкСм/см</span>
-            </div>
-            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span class="text-gray-400 block text-[10px]">Жёсткость</span>
-                <span class="font-bold text-gray-700">${item.hardness} мг-экв/л</span>
-            </div>
+            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><span class="text-gray-400 block text-[10px]">Водородный показатель</span><span class="font-bold text-gray-700">pH ${item.ph}</span></div>
+            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><span class="text-gray-400 block text-[10px]">Минерализация</span><span class="font-bold text-gray-700">${item.mineralization} мг/л</span></div>
+            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><span class="text-gray-400 block text-[10px]">Электропроводность</span><span class="font-bold text-gray-700">${item.conductivity} мкСм/см</span></div>
+            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><span class="text-gray-400 block text-[10px]">Жёсткость</span><span class="font-bold text-gray-700">${item.hardness} мг-экв/л</span></div>
         </div>
         <div class="text-xs space-y-1.5 border-t pt-3 text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div><strong>Температура воды:</strong> ${item.temp} °C</div>
