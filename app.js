@@ -430,6 +430,26 @@ function selectSource(id) {
             <div><strong>Дата внесения:</strong> ${item.date}</div>
         </div>
     `;
+    // Открытие/закрытие списка
+function toggleDropdown() {
+    const dropdown = document.getElementById("districtDropdown");
+    dropdown.classList.toggle("hidden");
+}
+
+// Выбор элемента и скрытие списка
+function selectDistrict(value) {
+    document.getElementById("addDistrict").value = value;
+    document.getElementById("districtDropdown").classList.add("hidden");
+}
+
+// Закрытие списка, если кликнули вне его
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById("districtDropdown");
+    const input = document.getElementById("addDistrict");
+    if (!input.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.add("hidden");
+    }
+});
 
     const query = document.getElementById("searchQuery").value.toLowerCase();
     const filterStatus = document.getElementById("filterStatus").value;
