@@ -1,4 +1,3 @@
-// НАСТРОЙКА: Ссылка на бэкенд, развернутый на Render
 const BACKEND_URL = "https://1-1-5hl5.onrender.com"; 
 
 let myMap;
@@ -12,16 +11,14 @@ ymaps.ready(initYandexMap);
 
 function initYandexMap() {
     myMap = new ymaps.Map("map", {
-        center: [43.2389, 76.8897], // Координаты центра Алматы
+        center: [43.2389, 76.8897], 
         zoom: 11,
         controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
     });
 
-    // Создаем коллекцию для геообъектов, чтобы легко обновлять их при фильтрации
     geoObjectsCollection = new ymaps.GeoObjectCollection();
     myMap.geoObjects.add(geoObjectsCollection);
 
-    // Слушатели событий для фильтрации и поиска в реальном времени
     document.getElementById("searchQuery").addEventListener("input", renderApp);
     document.getElementById("filterStatus").addEventListener("change", renderApp);
     document.getElementById("filterType").addEventListener("change", renderApp);
@@ -31,23 +28,85 @@ function initYandexMap() {
 }
 
 // ==========================================
-// 2. СЛОЖНАЯ АВТОРИЗАЦИЯ С СЕРВЕРА через fetch (JWT)
+// 2. УПРАВЛЕНИЕ ОКНОМ АВТОРИЗАЦИИ И РЕГИСТРАЦИИ
 // ==========================================
 
 function openAuthModal() {
     document.getElementById("authModal").classList.remove("hidden");
+    switchAuthTab('login'); // Всегда открывать сначала вкладку Входа
 }
 
 function closeAuthModal() {
     document.getElementById("authModal").classList.add("hidden");
-    document.getElementById("loginError").classList.add("hidden");
+    const msgBlock = document.getElementById("authMessage");
+    msgBlock.classList.add("hidden");
 }
 
+function switchAuthTab(tab) {
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
+    const tabLoginBtn = document.getElementById("tabLoginBtn");
+    const tabRegisterBtn = document.getElementById("tabRegisterBtn");
+    const msgBlock = document.getElementById("authMessage");
+    
+    msgBlock.classList.add("hidden"); // Очистить старые ошибки
+
+    if (tab === 'login') {
+        loginForm.classList.remove("hidden");
+        registerForm.classList.add("hidden");
+        tabLoginBtn.className = "w-1/2 pb-2 text-blue-600 border-b-2 border-blue-600 text-center";
+        tabRegisterBtn.className = "w-1/2 pb-2 text-gray-400 text-center";
+    } else {
+        loginForm.classList.add("hidden");
+        registerForm.classList.remove("hidden");
+        tabLoginBtn.className = "w-1/2 pb-2 text-gray-400 text-center";
+        tabRegisterBtn.className = "w-1/2 pb-2 text-emerald-600 border-b-2 border-emerald-600 text-center";
+    }
+}
+
+// ОТПРАВКА ДАННЫХ РЕГИСТРАЦИИ НА СЕРВЕР
+async function handleBackendRegister(event) {
+    event.preventDefault();
+    const msgBlock = document.getElementById("authMessage");
+
+    const username = document.getElementById("regUsername").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const fio = document.getElementById("regFio").value.trim();
+    const age = document.getElementById("regAge").value;
+    const university = document.getElementById("regUniversity").value.trim();
+    const specialty = document.getElementById("regSpecialty").value.trim();
+    const course = document.getElementById("regCourse").value;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, fio, age, university, specialty, course })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            msgBlock.innerText = "Регистрация успешна! Теперь войдите.";
+            msgBlock.className = "text-xs font-medium p-2.5 rounded-md mb-3 bg-emerald-50 text-emerald-700 block";
+            // Переключаем форму на вход через 1.5 секунды
+            setTimeout(() => { switchAuthTab('login'); }, 1500);
+        } else {
+            msgBlock.innerText = data.message || "Ошибка регистрации";
+            msgBlock.className = "text-xs font-medium p-2.5 rounded-md mb-3 bg-red-50 text-red-700 block";
+        }
+    } catch (err) {
+        msgBlock.innerText = "Сервер недоступен";
+        msgBlock.className = "text-xs font-medium p-2.5 rounded-md mb-3 bg-red-50 text-red-700 block";
+    }
+}
+
+// ВХОД (LOGIN)
 async function handleBackendLogin(event) {
     event.preventDefault();
     const username = document.getElementById("loginUsername").value.trim();
     const password = document.getElementById("loginPassword").value.trim();
-    const errorBlock = document.getElementById("loginError");
+    const msgBlock = document.getElementById("authMessage");
 
     try {
         const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
@@ -59,17 +118,16 @@ async function handleBackendLogin(event) {
         const data = await response.json();
 
         if (data.success) {
-            // Исправлено: сохраняем токен в localStorage
             localStorage.setItem("jwtToken", data.token);
             closeAuthModal();
             updateUIForAuth(data.role, data.profile);
         } else {
-            errorBlock.innerText = data.message || "Ошибка входа";
-            errorBlock.classList.remove("hidden");
+            msgBlock.innerText = data.message || "Ошибка входа";
+            msgBlock.className = "text-xs font-medium p-2.5 rounded-md mb-3 bg-red-50 text-red-700 block";
         }
     } catch (err) {
-        errorBlock.innerText = "Сервер недоступен";
-        errorBlock.classList.remove("hidden");
+        msgBlock.innerText = "Сервер недоступен";
+        msgBlock.className = "text-xs font-medium p-2.5 rounded-md mb-3 bg-red-50 text-red-700 block";
     }
 }
 
@@ -89,7 +147,7 @@ async function checkBackendSession() {
             localStorage.removeItem("jwtToken");
         }
     } catch (err) {
-        console.error("Ошибка автоматической проверки сессии:", err);
+        console.error("Ошибка сессии:", err);
     }
 }
 
@@ -115,7 +173,7 @@ function updateUIForAuth(role, profile) {
     grid.innerHTML = Object.entries(profile).map(([key, value]) => `
         <div class="bg-white p-2 rounded-md border border-blue-100 shadow-2xs">
             <span class="font-semibold text-gray-500 uppercase text-[10px] block">${key}</span>
-            <span class="text-gray-800 font-medium">${value}</span>
+            <span class="text-gray-800 font-medium text-xs">${value}</span>
         </div>
     `).join('');
 }
@@ -128,13 +186,11 @@ function handleLogout() {
 // ==========================================
 // 3. ОТРИСОВКА ТОЧЕК, ПОИСК И ФИЛЬТРАЦИЯ
 // ==========================================
-
 function renderApp() {
     const query = document.getElementById("searchQuery").value.toLowerCase();
     const filterStatus = document.getElementById("filterStatus").value;
     const filterType = document.getElementById("filterType").value;
 
-    // Фильтруем массив initialSources, объявленный в data.js
     const filtered = initialSources.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(query) || 
                               item.district.toLowerCase().includes(query) ||
@@ -178,8 +234,6 @@ function renderList(items) {
 
 function renderMapMarkers(items) {
     if (!myMap || !geoObjectsCollection) return;
-
-    // Очищаем старые метки перед новой отрисовкой
     geoObjectsCollection.removeAll();
 
     items.forEach(item => {
@@ -196,25 +250,16 @@ function renderMapMarkers(items) {
             preset: presetColor
         });
 
-        // Связываем клик по метке на карте с выбором источника в интерфейсе
-        placemark.events.add('click', () => {
-            selectSource(item.id);
-        });
-
+        placemark.events.add('click', () => { selectSource(item.id); });
         geoObjectsCollection.add(placemark);
     });
 }
 
 function selectSource(id) {
     currentSelectedId = id;
-    
-    // Перерисовываем список, чтобы подсветить активный элемент синей рамкой
-    renderApp();
-
     const item = initialSources.find(s => s.id === id);
     if (!item) return;
 
-    // Плавно перемещаем карту к выбранной точке
     myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
 
     const detailsCard = document.getElementById("detailsCard");
@@ -243,7 +288,6 @@ function selectSource(id) {
             </div>
             <div>${statusBadge}</div>
         </div>
-
         <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Физико-химические показатели:</h4>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-4">
             <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
@@ -263,7 +307,6 @@ function selectSource(id) {
                 <span class="font-bold text-gray-700">${item.hardness} мг-экв/л</span>
             </div>
         </div>
-
         <div class="text-xs space-y-1.5 border-t pt-3 text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div><strong>Температура воды:</strong> ${item.temp} °C</div>
             <div><strong>Примеси:</strong> <span class="text-gray-800 font-medium">${item.impurities}</span></div>
