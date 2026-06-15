@@ -40,6 +40,7 @@
     </div>
 
     <main class="container mx-auto p-4 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
         <div class="lg:col-span-1 flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 h-[620px]">
             <h2 class="text-lg font-bold text-gray-700 border-b pb-2">🔍 Поиск и фильтрация</h2>
             <input type="text" id="searchQuery" placeholder="Поиск по названию, району..." class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500 transition" />
@@ -47,7 +48,7 @@
             <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
                     <label class="block text-gray-500 mb-1">Статус воды</label>
-                    <select id="filterStatus" class="w-full p-2 border rounded-md bg-gray-50 outline-none">
+                    <select id="filterStatus" class="w-full p-2 border rounded-md bg-gray-50 outline-none focus:border-blue-500">
                         <option value="all">Все статусы</option>
                         <option value="suitable">💚 Подходит</option>
                         <option value="checking">💛 Проверяется</option>
@@ -56,7 +57,7 @@
                 </div>
                 <div>
                     <label class="block text-gray-500 mb-1">Тип источника</label>
-                    <select id="filterType" class="w-full p-2 border rounded-md bg-gray-50 outline-none">
+                    <select id="filterType" class="w-full p-2 border rounded-md bg-gray-50 outline-none focus:border-blue-500">
                         <option value="all">Все типы</option>
                         <option value="Родник">Родники</option>
                         <option value="Колонка">Колонки</option>
@@ -66,6 +67,7 @@
                     </select>
                 </div>
             </div>
+            
             <div class="mt-2 border-t pt-2 flex-grow overflow-y-auto space-y-2 pr-1" id="sourcesList"></div>
         </div>
 
@@ -73,7 +75,9 @@
             <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100">
                 <div id="map"></div>
             </div>
+            
             <div id="detailsCard" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hidden"></div>
+            
             <div id="noSelectPlaceholder" class="bg-gray-100 border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500 text-sm flex-grow flex items-center justify-center">
                 👈 Выберите маркер капли на Яндекс Карте или элемент в списке слева для просмотра физико-химических показателей.
             </div>
@@ -84,8 +88,8 @@
         <div class="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl transition-all">
             
             <div class="flex border-b mb-4 text-sm font-semibold">
-                <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 pb-2 text-blue-600 border-b-2 border-blue-600 text-center">Вход</button>
-                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 pb-2 text-gray-400 text-center">Регистрация студента</button>
+                <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 pb-2 text-blue-600 border-b-2 border-blue-600 text-center cursor-pointer">Вход</button>
+                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 pb-2 text-gray-400 text-center cursor-pointer">Регистрация студента</button>
             </div>
 
             <div id="authMessage" class="text-xs font-medium hidden p-2.5 rounded-md mb-3"></div>
@@ -100,8 +104,8 @@
                     <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500" />
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg hover:bg-gray-50">Отмена</button>
-                    <button type="submit" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Войти</button>
+                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg hover:bg-gray-50 cursor-pointer">Отмена</button>
+                    <button type="submit" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 cursor-pointer">Войти</button>
                 </div>
             </form>
 
@@ -136,7 +140,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">Специальность *</label>
-                        <input type="text" id="regSpecialty" required placeholder="ВТиПО / ИС" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
+                        <input type="text" id="regSpecialty" required placeholder="ВТиПО / ИС / Электротехника" class="w-full p-2 border rounded-lg text-xs bg-gray-50 outline-none focus:border-blue-500" />
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">Курс обучения *</label>
@@ -152,15 +156,14 @@
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg hover:bg-gray-50">Отмена</button>
-                    <button type="submit" class="px-4 py-2 text-xs bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Зарегистрироваться</button>
+                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg hover:bg-gray-50 cursor-pointer">Отмена</button>
+                    <button type="submit" class="px-4 py-2 text-xs bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 cursor-pointer">Зарегистрироваться</button>
                 </div>
             </form>
 
         </div>
     </div>
 
-    <script src="data.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
