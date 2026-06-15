@@ -129,7 +129,7 @@
                     <input type="number" id="addTemp" required placeholder="Температура °C" class="w-full p-2 border rounded-md" />
                     <input type="text" id="addImpurities" placeholder="Примеси (если есть)" class="w-full p-2 border rounded-md" />
                 </div>
-                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeAddPointModal()" class="px-4 py-1.5 border rounded-lg">Отмена</button><button type="submit" class="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded-lg">Отправить</button></div>
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeAddPointModal()" class="px-4 py-1.5 border rounded-lg">Отмена</button><button type="button" onclick="submitNewSource()"class="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition">Отправить</button></div>
             </form>
         </div>
     </div>
