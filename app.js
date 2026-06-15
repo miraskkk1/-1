@@ -1,5 +1,5 @@
 // НАСТРОЙКА: Укажи ссылку на твой бэкенд, развернутый на Render
-const BACKEND_URL = "http://localhost:5000"; // Замени на свой URL на Render после деплоя бэка
+const BACKEND_URL = "https://1-1-5hl5.onrender.com/"; // Замени на свой URL на Render после деплоя бэка
 
 let myMap;
 let currentSelectedId = null;
