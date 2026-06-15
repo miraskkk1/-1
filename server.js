@@ -4,71 +4,74 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = 'SUPER_SECRET_KEY_KAZAKHSTAN_2026'; // Ключ для шифрования токенов
+const JWT_SECRET = 'SUPER_SECRET_KEY_KAZAKHSTAN_2026'; 
 
-app.use(cors()); // Разрешаем фронтенду делать запросы к бэкенду
+app.use(cors()); 
 app.use(express.json());
 
-// ИМИТАЦИЯ СЛОЖНОЙ БАЗЫ ДАННЫХ (Расширенные профили из ТЗ)
+// НАША ДИНАМИЧЕСКАЯ БАЗА ДАННЫХ (хранится в оперативной памяти)
 const usersDatabase = {
     "admin": {
         username: "admin",
         password: "123", 
         role: "moderator",
         profile: {
-            fio: "Канатулы Мирас",
-            degree: "PhD в области электротехники",
-            university: "МУИТ (IITU)",
-            department: "Лаборатория гидро-электролиза Юткина",
-            managedPointsCount: 50,
-            accessLevel: "Полный доступ (Администратор системы)"
-        }
-    },
-    "student1": {
-        username: "student1",
-        password: "123",
-        role: "student",
-        profile: {
-            fio: "Асхат Бахытжан",
-            university: "МУИТ (IITU)",
-            specialty: "Вычислительная техника",
-            course: 3,
-            broughtSamples: 4,
-            assignedRegion: "Алматы, Бостандыкский район",
-            rating: "Активный исследователь"
-        }
-    },
-    "student2": {
-        username: "student2",
-        password: "123",
-        role: "student",
-        profile: {
-            fio: "Диана Серикова",
-            university: "КазНУ им. аль-Фараби",
-            specialty: "Гидрология",
-            course: 4,
-            broughtSamples: 2,
-            assignedRegion: "Алматинская область, Талгарский район",
-            rating: "Лаборант-стажер"
+            "ФИО": "Канатулы Мирас",
+            "Статус": "PhD в области электротехники",
+            "ВУЗ": "МУИТ (IITU)",
+            "Лаборатория": "Гидро-электролиз Юткина",
+            "Доступ": "Администратор (Полный доступ)"
         }
     }
 };
 
-// 1. МАРШРУТ АВТОРИЗАЦИИ (LOGIN)
+// 1. МАРШРУТ РЕГИСТРАЦИИ СТУДЕНТА (НОВЫЙ)
+app.post('/api/auth/register', (req, res) => {
+    const { username, password, fio, age, university, specialty, course } = req.body;
+
+    if (!username || !password || !fio || !university) {
+        return res.status(400).json({ success: false, message: "Заполните обязательные поля" });
+    }
+
+    // Проверяем, существует ли уже пользователь с таким логином
+    if (usersDatabase[username.toLowerCase()]) {
+        return res.status(400).json({ success: false, message: "Этот логин уже занят" });
+    }
+
+    // Сохраняем нового студента в базу данных
+    usersDatabase[username.toLowerCase()] = {
+        username: username.toLowerCase(),
+        password: password, // В пет-проектах допускается хранение строкой
+        role: "student",
+        profile: {
+            "ФИО": fio,
+            "Возраст": `${age} лет`,
+            "Университет": university,
+            "Специальность": specialty,
+            "Курс обучения": `${course} курс`,
+            "Статус": "Студент-исследователь",
+            "Образцы": "0 принесено (Новый аккаунт)"
+        }
+    };
+
+    return res.json({ success: true, message: "Пользователь успешно зарегистрирован" });
+});
+
+// 2. МАРШРУТ АВТОРИЗАЦИИ (LOGIN)
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
     
-    const user = usersDatabase[username];
+    if (!username) return res.status(400).json({ success: false, message: "Введите логин" });
+    
+    const user = usersDatabase[username.toLowerCase()];
     
     if (user && user.password === password) {
-        // Создаем токен, зашифровав в него имя и роль (токен активен 24 часа)
         const token = jwt.sign(
             { username: user.username, role: user.role }, 
             JWT_SECRET, 
             { expiresIn: '24h' }
         );
         
-        // Возвращаем токен и полную информацию о профиле
         return res.json({
             success: true,
             token: token,
@@ -80,7 +83,7 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ success: false, message: "Неверный логин или пароль" });
 });
 
-// 2. ЗАЩИЩЕННЫЙ МАРШРУТ ПРОВЕРКИ ТОКЕНА (ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ) - БЕЗОПАСНАЯ ВЕРСИЯ
+// 3. ЗАЩИЩЕННЫЙ МАРШРУТ ПРОВЕРКИ ТОКЕНА
 app.get('/api/auth/me', (req, res) => {
     const authHeader = req.headers['authorization'];
     
@@ -105,5 +108,5 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
+    console.log(`Сервер успешно запущен на порту ${PORT}`);
 });
