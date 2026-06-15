@@ -11,13 +11,13 @@ app.use(express.json());
 
 // 1. ИМИТАЦИЯ БАЗЫ ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ (Поля синхронизированы с UI)
 const usersDatabase = {
-    "admin": {
-        username: "admin",
-        password: "123", 
+    "miras": {
+        username: "miras",
+        password: "kanatuly", 
         role: "moderator",
         profile: {
             "ФИО": "Канатулы Мирас",
-            "Статус": "PhD в области электротехники",
+            "Статус": "Krasavchik",
             "ВУЗ": "МУИТ (IITU)",
             "Лаборатория": "Гидро-электролиз Юткина",
             "Доступ": "Администратор (Полный доступ)"
