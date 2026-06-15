@@ -1,4 +1,4 @@
-// НАСТРОЙКА: Ссылка на бэкенд, развернутый на Render
+// Ссылка на бэкенд, развернутый на Render (без слэша на конце)
 const BACKEND_URL = "https://1-1-5hl5.onrender.com"; 
 
 let myMap;
@@ -22,15 +22,11 @@ async function initYandexMap() {
     geoObjectsCollection = new ymaps.GeoObjectCollection();
     myMap.geoObjects.add(geoObjectsCollection);
 
-    // Вешаем слушатели на элементы фильтрации и поиска
     document.getElementById("searchQuery").addEventListener("input", renderApp);
     document.getElementById("filterStatus").addEventListener("change", renderApp);
     document.getElementById("filterType").addEventListener("change", renderApp);
 
-    // Проверяем, авторизован ли пользователь (токен в localStorage)
     await checkBackendSession();
-    
-    // Загружаем данные с сервера
     await loadPointsFromServer();
 }
 
@@ -42,7 +38,6 @@ async function loadPointsFromServer() {
         let response = await fetch(`${BACKEND_URL}/api/sources`);
         loadedSources = await response.json();
         
-        // Если база данных бэкенда пустая, проводим первичную синхронизацию из data.js
         if (loadedSources.length === 0 && typeof initialSources !== 'undefined') {
             console.log("База данных сервера пуста. Синхронизируем начальные точки из data.js...");
             await fetch(`${BACKEND_URL}/api/sources/sync`, {
@@ -50,7 +45,6 @@ async function loadPointsFromServer() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(initialSources)
             });
-            // Повторно запрашиваем уже наполненную базу
             response = await fetch(`${BACKEND_URL}/api/sources`);
             loadedSources = await response.json();
         }
@@ -65,11 +59,9 @@ async function loadPointsFromServer() {
 // ==========================================
 // 3. АВТОРИЗАЦИЯ, РЕГИСТРАЦИЯ И СЕССИИ
 // ==========================================
-
-// Открытие / Закрытие модальных окон
 function openAuthModal() { 
     document.getElementById("authModal").classList.remove("hidden"); 
-    toggleToLogin(); // Всегда открываем на форме входа по умолчанию
+    toggleToLogin(); 
 }
 function closeAuthModal() { 
     document.getElementById("authModal").classList.add("hidden"); 
@@ -95,7 +87,7 @@ function toggleToLogin() {
     document.getElementById("loginError").classList.add("hidden");
 }
 
-// Функция входа (Login)
+// Вход в систему
 async function handleBackendLogin(event) {
     event.preventDefault();
     const username = document.getElementById("loginUsername").value.trim();
@@ -124,7 +116,7 @@ async function handleBackendLogin(event) {
     }
 }
 
-// Функция регистрации нового исследователя (Register)
+// Регистрация нового пользователя
 async function handleBackendRegister(event) {
     event.preventDefault();
     const username = document.getElementById("loginUsername").value.trim();
@@ -148,7 +140,7 @@ async function handleBackendRegister(event) {
 
         if (data.success) {
             alert("Регистрация успешна! Теперь вы можете войти.");
-            toggleToLogin(); // Возвращаем на форму ввода для авторизации
+            toggleToLogin(); 
         } else {
             errorBlock.innerText = data.message || "Ошибка регистрации";
             errorBlock.classList.remove("hidden");
@@ -158,7 +150,7 @@ async function handleBackendRegister(event) {
     }
 }
 
-// Проверка валидности токена при обновлении страницы (Me)
+// Проверка сессии при загрузке страницы
 async function checkBackendSession() {
     const token = localStorage.getItem("jwtToken");
     if (!token) return;
@@ -178,18 +170,15 @@ async function checkBackendSession() {
     }
 }
 
-// Обновление интерфейса в зависимости от роли
 function updateUIForAuth(role, profile) {
     currentUserProfile = profile;
     
-    // Меняем кнопку "Войти" на кнопку "Выйти"
     document.getElementById("authSection").innerHTML = `
         <button onclick="handleLogout()" class="bg-red-600 text-white px-4 py-1.5 rounded-full font-medium text-sm shadow-sm hover:bg-red-700 transition cursor-pointer">
             Выйти
         </button>
     `;
     
-    // Активируем кнопку кабинета модератора, если роль соответствует
     const adminBtn = document.getElementById("adminPanelBtn");
     if (role === 'moderator' && adminBtn) {
         adminBtn.classList.remove("text-gray-400", "opacity-40", "cursor-not-allowed");
@@ -198,7 +187,6 @@ function updateUIForAuth(role, profile) {
         adminBtn.setAttribute("onclick", "openAdminModal()");
     }
     
-    // Отображаем электронный паспорт исследователя
     const dashboard = document.getElementById("profileDashboard");
     if (dashboard && profile) {
         dashboard.classList.remove("hidden");
@@ -219,8 +207,6 @@ function handleLogout() {
 // ==========================================
 // 4. ДОБАВЛЕНИЕ И МОДЕРАЦИЯ ТОЧЕК
 // ==========================================
-
-// Отправка новой точки на сервер
 async function handleCreatePoint(event) {
     event.preventDefault();
     const authorName = currentUserProfile ? currentUserProfile["ФИО"] : "Студент-Лаборант";
@@ -251,14 +237,13 @@ async function handleCreatePoint(event) {
         if (response.ok) {
             alert("Заявка успешно создана и отправлена модераторам на верификацию!");
             closeAddPointModal();
-            await loadPointsFromServer(); // Перезагружаем список
+            await loadPointsFromServer(); 
         }
     } catch (err) {
         console.error("Ошибка добавления точки:", err);
     }
 }
 
-// Изменение статуса модератором (Одобрить/Отклонить)
 async function moderatePoint(id, status) {
     try {
         const response = await fetch(`${BACKEND_URL}/api/sources/moderate`, {
@@ -274,7 +259,6 @@ async function moderatePoint(id, status) {
     }
 }
 
-// Повышение прав пользователя до модератора
 async function handleAssignModerator(event) {
     event.preventDefault();
     const username = document.getElementById("modTargetUsername").value.trim();
@@ -303,7 +287,6 @@ async function handleAssignModerator(event) {
     }
 }
 
-// Отрисовка очереди на модерацию в панели управления
 function renderModerationQueue() {
     const queueContainer = document.getElementById("moderationQueueList");
     if (!queueContainer) return;
@@ -331,7 +314,7 @@ function renderModerationQueue() {
 }
 
 // ==========================================
-// 5. РЕНДЕРИНГ И СИНХРОНИЗАЦИЯ ИНТЕРФЕЙСА
+// 5. РЕНДЕРИНГ ИНТЕРФЕЙСА И КАРТЫ
 // ==========================================
 function renderApp() {
     const query = document.getElementById("searchQuery").value.toLowerCase();
@@ -351,7 +334,6 @@ function renderApp() {
     renderMapMarkers(filtered);
 }
 
-// Отрисовка списка слева
 function renderList(items) {
     const listContainer = document.getElementById("sourcesList");
     if (!listContainer) return;
@@ -379,7 +361,6 @@ function renderList(items) {
     }).join('');
 }
 
-// Расстановка меток на карте Яндекса
 function renderMapMarkers(items) {
     if (!myMap || !geoObjectsCollection) return;
     geoObjectsCollection.removeAll();
@@ -401,7 +382,6 @@ function renderMapMarkers(items) {
     });
 }
 
-// Клик по элементу и раскрытие полной физико-химической карточки
 function selectSource(id) {
     currentSelectedId = id;
     const item = loadedSources.find(s => s.id === id);
@@ -451,7 +431,6 @@ function selectSource(id) {
         </div>
     `;
 
-    // Перерисовываем список, чтобы подсветить активный элемент
     const query = document.getElementById("searchQuery").value.toLowerCase();
     const filterStatus = document.getElementById("filterStatus").value;
     const filterType = document.getElementById("filterType").value;
