@@ -333,7 +333,44 @@ function renderApp() {
     renderList(filtered);
     renderMapMarkers(filtered);
 }
+async function submitNewSource() {
+    // 1. Собираем данные из полей ввода
+    const sourceData = {
+        name: document.getElementById('addName').value, // убедитесь, что у инпутов есть эти ID
+        district: document.getElementById('addDistrict').value,
+        lat: parseFloat(document.getElementById('addLat').value),
+        lng: parseFloat(document.getElementById('addLng').value),
+        type: 'Родник', // Или значение из вашего селектора типа
+        status: 'checking'
+    };
 
+    // 2. Простейшая проверка на заполненность
+    if (!sourceData.name || !sourceData.lat || !sourceData.lng) {
+        alert("Пожалуйста, заполните все обязательные поля!");
+        return;
+    }
+
+    try {
+        // 3. Отправка данных на ваш сервер
+        const response = await fetch('/api/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sourceData)
+        });
+
+        if (response.ok) {
+            alert("Точка успешно добавлена на карту!");
+            // Здесь можно вызвать функцию обновления карты, например:
+            // loadMarkers(); 
+            // closeAddModal(); // Ваша функция закрытия окна
+        } else {
+            alert("Ошибка при сохранении на сервере.");
+        }
+    } catch (error) {
+        console.error("Ошибка сети:", error);
+        alert("Не удалось отправить данные.");
+    }
+}
 function renderList(items) {
     const listContainer = document.getElementById("sourcesList");
     if (!listContainer) return;
