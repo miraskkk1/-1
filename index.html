@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Интерактивная карта природных источников воды Казахстана</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <style>
-        #map { height: 500px; width: 100%; border-radius: 0.75rem; z-index: 1; }
-        .custom-pin { font-size: 1.8rem; text-shadow: 0px 0px 3px black; cursor: pointer; text-align: center; display: block; }
+        #map { height: 500px; width: 100%; border-radius: 0.75rem; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
@@ -20,7 +19,7 @@
                 <p class="text-xs text-blue-100 mt-1">Интерактивный анализ природных источников для электролиза Юткина</p>
             </div>
             <div class="flex items-center gap-3" id="globalMenuZone">
-                <button id="adminPanelBtn" class="bg-blue-800 text-gray-400 px-3 py-1.5 text-xs font-semibold rounded-md transition opacity-60">
+                <button id="adminPanelBtn" class="bg-blue-800 text-gray-400 px-3 py-1.5 text-xs font-semibold rounded-md transition opacity-40 cursor-not-allowed">
                     ⚙️ Кабинет модератора
                 </button>
                 <div id="authSection">
@@ -32,129 +31,58 @@
         </div>
     </header>
 
+    <div id="profileDashboard" class="container mx-auto mt-4 px-4 hidden">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-xs">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-600">Электронный паспорт исследователя (Данные с защищенного бэкенда):</h3>
+            <div id="profileDetailsGrid" class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2 text-xs text-gray-700">
+                </div>
+        </div>
+    </div>
+
     <main class="container mx-auto p-4 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         <div class="lg:col-span-1 flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 max-h-[650px]">
             <h2 class="text-lg font-bold text-gray-700 border-b pb-2">🔍 Поиск и фильтрация</h2>
+            <input type="text" id="searchQuery" placeholder="Поиск по названию, району..." class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none" />
             
-            <input 
-                type="text" 
-                id="searchQuery"
-                placeholder="Поиск по названию, району..." 
-                class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none bg-gray-50"
-            />
-
             <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                    <label class="block text-gray-500 font-medium mb-1">Статус электролиза</label>
-                    <select id="filterStatus" class="w-full p-2 border rounded-md bg-gray-50">
-                        <option value="all">Все статусы</option>
-                        <option value="suitable">💚 Подходит</option>
-                        <option value="checking">💛 Проверяется</option>
-                        <option value="unsuitable">❤️ Не подходит</option>
-                    </select>
+                    <label class="block text-gray-500 mb-1">Статус воды</label>
+                    <select id="filterStatus" class="w-full p-2 border rounded-md bg-gray-50"><option value="all">Все</option><option value="suitable">💚 Подходит</option><option value="checking">💛 Проверяется</option></select>
                 </div>
                 <div>
-                    <label class="block text-gray-500 font-medium mb-1">Тип источника</label>
-                    <select id="filterType" class="w-full p-2 border rounded-md bg-gray-50">
-                        <option value="all">Все типы</option>
-                        <option value="Родник">Родники</option>
-                        <option value="Колонка">Колонки</option>
-                        <option value="Скважина">Скважины</option>
-                        <option value="Минеральный">Минеральные</option>
-                        <option value="Артезианский">Артезианские</option>
-                    </select>
+                    <label class="block text-gray-500 mb-1">Тип источника</label>
+                    <select id="filterType" class="w-full p-2 border rounded-md bg-gray-50"><option value="all">Все</option><option value="Родник">Родники</option><option value="Минеральный">Минеральные</option></select>
                 </div>
             </div>
-
-            <button onclick="document.getElementById('addFormModal').classList.remove('hidden')" class="w-full bg-cyan-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-cyan-700 transition mt-2">
-                ➕ Предложить новый источник
-            </button>
-
-            <div class="mt-2 border-t pt-3 flex-grow overflow-y-auto space-y-2 pr-1" id="sourcesList"></div>
+            <div class="mt-2 border-t pt-3 flex-grow overflow-y-auto space-y-2" id="sourcesList"></div>
         </div>
 
         <div class="lg:col-span-2 flex flex-col gap-4">
             <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100">
                 <div id="map"></div>
             </div>
-
             <div id="detailsCard" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-l-blue-600 border border-gray-100 hidden"></div>
-            
             <div id="noSelectPlaceholder" class="bg-gray-100 border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500 text-sm">
-                👈 Выберите любой источник на карте или в списке слева, чтобы открыть лабораторные показатели.
-            </div>
-
-            <div class="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div>
-                    <h4 class="font-bold text-gray-800 text-sm">🧪 Поддержать исследование новых источников</h4>
-                    <p class="text-xs text-gray-600 mt-0.5">Стоимость полного лабораторного анализа одного образца воды — около <strong>20 000 тенге</strong>.</p>
-                </div>
-                <button onclick="alert('Платежный шлюз Kaspi QR успешно сымулирован!')" class="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm whitespace-nowrap transition">
-                    📱 Оплатить через Kaspi QR
-                </button>
+                👈 Выберите маркер капли на Яндекс Карте или в списке для просмотра физико-химических показателей.
             </div>
         </div>
     </main>
 
-    <section class="bg-white border-t border-gray-200 p-6 shadow-xs mt-6">
-        <div class="container mx-auto">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">🎓 Раздел участников: «56 исследователей проекта»</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[160px] overflow-y-auto pr-2" id="studentsGrid"></div>
-        </div>
-    </section>
-
     <div id="authModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999] hidden">
         <div class="bg-white p-6 rounded-xl max-w-sm w-full shadow-2xl">
-            <h3 class="text-xl font-bold text-gray-800 mb-1">🔐 Вход в систему</h3>
-            <p class="text-xs text-gray-400 mb-4">Авторизация для студентов и модераторов с сохранением сессии.</p>
-            
-            <form onsubmit="handleLoginSubmit(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">Логин</label>
-                    <input type="text" id="loginUsername" required placeholder="admin или student1" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none" />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">Пароль</label>
-                    <input type="password" id="loginPassword" required placeholder="Введите пароль" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none" />
-                </div>
-                
+            <h3 class="text-xl font-bold text-gray-800 mb-1">🔐 Авторизация JWT</h3>
+            <form onsubmit="handleBackendLogin(event)" class="space-y-3 mt-3">
+                <input type="text" id="loginUsername" required placeholder="Логин (admin, student1)" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
+                <input type="password" id="loginPassword" required placeholder="Пароль (123)" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" />
                 <div id="loginError" class="text-xs text-red-500 font-medium hidden"></div>
-
-                <div class="bg-gray-50 p-2.5 rounded-lg text-[10px] text-gray-500 space-y-0.5 border">
-                    <p class="font-bold">🔑 Тестовые данные (пароль у всех 123):</p>
-                    <p>• Модератор: <code class="bg-gray-200 px-1 rounded text-gray-800">admin</code></p>
-                    <p>• Студент: <code class="bg-gray-200 px-1 rounded text-gray-800">student1</code></p>
-                </div>
-
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg text-gray-500">Отмена</button>
-                    <button type="submit" class="px-4 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm">Войти</button>
+                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 text-xs border rounded-lg">Отмена</button>
+                    <button type="submit" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg">Войти</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="addFormModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999] hidden">
-        <div class="bg-white p-5 rounded-xl max-w-md w-full shadow-2xl space-y-3">
-            <h3 class="text-lg font-bold text-gray-800">➕ Предложить источник воды</h3>
-            <div class="space-y-2">
-                <input type="text" id="newFormName" placeholder="Название (например: Родник Акку)" class="w-full p-2 border rounded text-sm bg-gray-50" />
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="number" step="0.0001" id="newFormLat" placeholder="Широта (например: 43.19)" class="w-full p-2 border rounded text-sm bg-gray-50" />
-                    <input type="number" step="0.0001" id="newFormLng" placeholder="Долгота (например: 77.01)" class="w-full p-2 border rounded text-sm bg-gray-50" />
-                </div>
-                <input type="text" id="newFormLoc" placeholder="Адрес или ущелье" class="w-full p-2 border rounded text-sm bg-gray-50" />
-                <input type="text" id="newFormAuthor" placeholder="Ваше ФИО" class="w-full p-2 border rounded text-sm bg-gray-50" />
-            </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="document.getElementById('addFormModal').classList.add('hidden')" class="px-4 py-2 text-xs border rounded text-gray-500">Отмена</button>
-                <button onclick="addNewSourceItem()" class="px-4 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded">Отправить</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="data.js"></script>
     <script src="app.js"></script>
 </body>
