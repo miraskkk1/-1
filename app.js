@@ -6,7 +6,7 @@ let geoObjectsCollection;
 let loadedSources = [];
 let currentUserProfile = null;
 
-// Инициализация
+// Инициализация при полной загрузке карт Яндекс
 ymaps.ready(initYandexMap);
 
 async function initYandexMap() {
@@ -19,40 +19,41 @@ async function initYandexMap() {
     geoObjectsCollection = new ymaps.GeoObjectCollection();
     myMap.geoObjects.add(geoObjectsCollection);
 
-    // Вешаем события фильтрации и поиска
+    // Вешаем слушатели событий фильтрации интерфейса
     document.getElementById("searchQuery").addEventListener("input", renderApp);
     document.getElementById("filterStatus").addEventListener("change", renderApp);
     document.getElementById("filterType").addEventListener("change", renderApp);
 
-    // Проверяем авторизацию и загружаем точки
+    // Первичные проверки сессии и загрузка
     await checkBackendSession();
     await loadPointsFromServer();
 }
 
-// Загрузка точек с авто-синхронизацией
+// Загрузка точек с авто-инициализацией базы данных (в случае сброса сервера Render)
 async function loadPointsFromServer() {
     try {
-        const response = await fetch(`${BACKEND_URL}/api/sources`);
+        let response = await fetch(`${BACKEND_URL}/api/sources`);
         loadedSources = await response.json();
-        
-        // Если сервер перезапустился и пуст, отправляем данные из data.js
-        if (loadedSources.length === 0 && typeof initialSources !== 'undefined') {
+
+        // СИНХРОНИЗАЦИЯ: Если бэкенд чистый, отправляем массив initialSources из data.js
+        if (loadedSources.length === 0 && typeof initialSources !== 'undefined' && initialSources.length > 0) {
+            console.log("База данных сервера пуста. Отправляем стартовые точки из data.js...");
             await fetch(`${BACKEND_URL}/api/sources/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(initialSources)
             });
-            const retryResponse = await fetch(`${BACKEND_URL}/api/sources`);
-            loadedSources = await retryResponse.json();
+            response = await fetch(`${BACKEND_URL}/api/sources`);
+            loadedSources = await response.json();
         }
-        
+
         renderApp();
     } catch (err) {
-        console.error("Ошибка при загрузке точек:", err);
+        console.error("Ошибка при получении данных с сервера:", err);
     }
 }
 
-// Рендеринг приложения
+// Главная функция рендеринга интерфейса (Фильтрация + Поиск)
 function renderApp() {
     if (!loadedSources) return;
     const query = document.getElementById("searchQuery").value.toLowerCase();
@@ -60,7 +61,7 @@ function renderApp() {
     const filterType = document.getElementById("filterType").value;
 
     const filtered = loadedSources.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(query) || 
+        const matchesSearch = (item.name && item.name.toLowerCase().includes(query)) || 
                               (item.location && item.location.toLowerCase().includes(query));
         const matchesStatus = filterStatus === "all" || item.status === filterStatus;
         const matchesType = filterType === "all" || item.type === filterType;
@@ -71,7 +72,7 @@ function renderApp() {
     renderMapMarkers(filtered);
 }
 
-// Отображение списка слева
+// Отображение списка элементов на левой боковой панели
 function renderList(items) {
     const listContainer = document.getElementById("sourcesList");
     if (!listContainer) return;
@@ -84,44 +85,43 @@ function renderList(items) {
     listContainer.innerHTML = items.map(item => {
         let statusBadge = item.status === 'suitable' ? '💚' : item.status === 'checking' ? '💛' : '❌';
         return `
-            <div onclick="selectSource(${item.id})" class="p-2 border rounded-lg cursor-pointer hover:bg-gray-100 text-xs transition flex justify-between items-center ${currentSelectedId === item.id ? 'bg-blue-50 border-blue-300' : ''}">
+            <div onclick="selectSource(${item.id})" class="p-2 border rounded-lg cursor-pointer hover:bg-gray-100 text-xs transition flex justify-between items-center ${currentSelectedId === item.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-100'}">
                 <div>
                     <h4 class="font-bold text-gray-700">${item.name}</h4>
-                    <p class="text-gray-500 text-[11px]">${item.type} • ${item.district || 'Алматы'}</p>
+                    <p class="text-gray-400 text-[10px]">${item.type} • ${item.district || 'Алматы'}</p>
                 </div>
-                <span class="text-sm">${statusBadge}</span>
+                <span class="text-sm select-none">${statusBadge}</span>
             </div>
         `;
     }).join('');
 }
 
-// Отображение маркеров на карте
+// Отрисовка гео-точек и кластеров на Яндекс Картах
 function renderMapMarkers(items) {
     if (!geoObjectsCollection) return;
     geoObjectsCollection.removeAll();
     
     items.forEach(item => {
-        // Задаем цвет в зависимости от статуса
-        let presetColor = 'islands#yellowWaterIcon';
+        let presetColor = 'islands#yellowWaterIcon'; // По умолчанию на проверке
         if (item.status === 'suitable') presetColor = 'islands#greenWaterIcon';
         if (item.status === 'unsuitable') presetColor = 'islands#redWaterIcon';
 
-        const p = new ymaps.Placemark([item.lat, item.lng], {
-            balloonContentHeader: item.name,
-            balloonContentBody: `${item.type}<br><small>${item.location}</small>`
+        const placemark = new ymaps.Placemark([item.lat, item.lng], {
+            balloonContentHeader: `<strong class="text-blue-800">${item.name}</strong>`,
+            balloonContentBody: `<span class="text-xs">${item.type}<br>📍 ${item.location}</span>`
         }, {
             preset: presetColor
         });
         
-        p.events.add('click', () => selectSource(item.id));
-        geoObjectsCollection.add(p);
+        placemark.events.add('click', () => selectSource(item.id));
+        geoObjectsCollection.add(placemark);
     });
 }
 
-// Выбор конкретного источника (Карточка деталей)
+// Выбор источника и отображение карточки расширенных лабораторных данных
 function selectSource(id) {
     currentSelectedId = id;
-    renderApp(); // Обновляем подсветку в списке
+    renderApp(); // Перерисовываем для добавления рамки активного элемента в списке
     
     const item = loadedSources.find(p => p.id === id);
     if (!item) return;
@@ -133,42 +133,37 @@ function selectSource(id) {
     if (detailsCard) {
         detailsCard.classList.remove("hidden");
         
-        let statusText = item.status === 'suitable' ? '<span class="text-emerald-600 font-bold">💚 Подходит для электролиза</span>' : 
-                         item.status === 'checking' ? '<span class="text-amber-500 font-bold">💛 На проверке в лаборатории</span>' : 
-                                                      '<span class="text-red-500 font-bold">❌ Не подходит</span>';
+        let statusText = item.status === 'suitable' ? '<span class="text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded border border-emerald-200">💚 Подходит для электролиза</span>' : 
+                         item.status === 'checking' ? '<span class="text-amber-500 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">💛 На проверке</span>' : 
+                                                      '<span class="text-red-500 font-bold bg-red-50 px-2 py-1 rounded border border-red-200">❌ Не подходит</span>';
 
         detailsCard.innerHTML = `
-            <div class="flex justify-between items-start border-b pb-3 mb-3">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b pb-3 mb-3 gap-2">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-800">${item.name}</h3>
-                    <p class="text-xs text-gray-500">${item.type} — ${item.location}</p>
+                    <h3 class="text-lg font-bold text-gray-800">${item.name}</h3>
+                    <p class="text-xs text-gray-400">📍 Ориентир: ${item.location}</p>
                 </div>
-                <div class="text-right">${statusText}</div>
+                <div class="text-xs">${statusText}</div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs bg-gray-50 p-3 rounded-lg mb-4">
-                <div><span class="text-gray-400">Водородный показатель:</span> <strong class="block text-sm text-gray-700">pH ${item.ph}</strong></div>
-                <div><span class="text-gray-400">Минерализация:</span> <strong class="block text-sm text-gray-700">${item.mineralization} мг/л</strong></div>
-                <div><span class="text-gray-400">Проводимость:</span> <strong class="block text-sm text-gray-700">${item.conductivity} мкСм/см</strong></div>
-                <div><span class="text-gray-400">Жёсткость:</span> <strong class="block text-sm text-gray-700">${item.hardness} мг-экв/л</strong></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-gray-50 p-3 rounded-lg mb-4 border border-gray-100">
+                <div><span class="text-gray-400 block text-[11px]">Водородный показатель:</span> <strong class="text-sm text-gray-700">pH ${item.ph}</strong></div>
+                <div><span class="text-gray-400 block text-[11px]">Минерализация:</span> <strong class="text-sm text-gray-700">${item.mineralization} мг/л</strong></div>
+                <div><span class="text-gray-400 block text-[11px]">Электропроводимость:</span> <strong class="text-sm text-gray-700">${item.conductivity} мкСм/см</strong></div>
+                <div><span class="text-gray-400 block text-[11px]">Общая жёсткость:</span> <strong class="text-sm text-gray-700">${item.hardness} мг-экв/л</strong></div>
             </div>
-            <div class="text-xs space-y-1 text-gray-600 mb-3">
-                <p>🌡️ <strong>Температура воды:</strong> ${item.temp} °C</p>
-                <p>🔬 <strong>Примеси / Осадок:</strong> ${item.impurities}</p>
-                <p>👤 <strong>Исследователь:</strong> ${item.author} (<span class="text-[11px]">${item.date || 'Дата не указана'}</span>)</p>
+            <div class="text-xs space-y-1.5 text-gray-600 mb-2">
+                <p>🌡️ <strong>Температура воды на выходе:</strong> ${item.temp} °C</p>
+                <p>🔬 <strong>Характер примесей / Наличие осадка:</strong> ${item.impurities}</p>
+                <p>👤 <strong>Исследователь-лаборант:</strong> ${item.author} <span class="text-[11px] text-gray-400">(${item.date || 'Дата проверки скрыта'})</span></p>
             </div>
-            ${currentUserProfile && currentUserProfile["Доступ"].includes("Администратор") && item.status === 'checking' ? `
-                <div class="flex gap-2 pt-2 border-t mt-3">
-                    <button onclick="moderatePoint(${item.id}, 'suitable')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-md text-xs font-bold cursor-pointer hover:bg-emerald-700">Одобрить источник</button>
-                    <button onclick="moderatePoint(${item.id}, 'unsuitable')" class="bg-red-600 text-white px-3 py-1.5 rounded-md text-xs font-bold cursor-pointer hover:bg-red-700">Отклонить</button>
-                </div>
-            ` : ''}
         `;
         
+        // Автоматический фокус и зум карты на выбранную гео-точку
         myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
     }
 }
 
-// Создание новой точки на карте
+// Отправка формы создания новой точки
 async function handleCreatePoint(event) {
     event.preventDefault();
     const authorName = currentUserProfile ? currentUserProfile["ФИО"] : "Студент-Лаборант";
@@ -197,18 +192,18 @@ async function handleCreatePoint(event) {
         });
         
         if (response.ok) {
-            alert("Заявка на добавление источника успешно создана и отправлена модератору!");
+            alert("Заявка успешно отправлена! Точка появится на общей карте сразу после подтверждения модератором.");
             closeAddPointModal();
-            await loadPointsFromServer();
+            await loadPointsFromServer(); // Перечитываем базу
         } else {
-            alert("Ошибка сохранения.");
+            alert("Ошибка сохранения данных сервером.");
         }
     } catch (err) {
-        console.error("Ошибка отправки:", err);
+        console.error("Сбой сети при отправке точки:", err);
     }
 }
 
-// --- СИСТЕМА АВТОРИЗАЦИИ И СЕССИЙ ---
+// --- СИСТЕМА АВТОРИЗАЦИИ, СЕССИЙ И СЕКЬЮРНОСТИ ---
 
 async function checkBackendSession() {
     const token = localStorage.getItem("token");
@@ -225,11 +220,11 @@ async function checkBackendSession() {
             localStorage.removeItem("token");
         }
     } catch (err) {
-        console.error("Ошибка сессии:", err);
+        console.error("Сервер авторизации недоступен:", err);
     }
 }
 
-async function handleBackendLogin(event) {
+async function handleBackendLogin() {
     const username = document.getElementById("loginUsername").value;
     const password = document.getElementById("loginPassword").value;
     const errorDiv = document.getElementById("loginError");
@@ -247,15 +242,15 @@ async function handleBackendLogin(event) {
             handleAuthSuccess(data);
             closeAuthModal();
         } else {
-            errorDiv.innerText = data.message || "Ошибка входа";
+            errorDiv.innerText = data.message || "Неверный логин или пароль";
             errorDiv.classList.remove("hidden");
         }
     } catch (err) {
-        console.error("Ошибка авторизации:", err);
+        console.error("Ошибка при авторизации:", err);
     }
 }
 
-async function handleBackendRegister(event) {
+async function handleBackendRegister() {
     const username = document.getElementById("loginUsername").value;
     const password = document.getElementById("loginPassword").value;
     const errorDiv = document.getElementById("loginError");
@@ -269,64 +264,123 @@ async function handleBackendRegister(event) {
         const data = await response.json();
 
         if (response.ok) {
-            alert("Регистрация успешна! Теперь вы можете войти.");
+            alert("Регистрация успешна! Войдите под своими учетными данными.");
             toggleToLogin();
         } else {
-            errorDiv.innerText = data.message || "Ошибка регистрации";
+            errorDiv.innerText = data.message || "Ошибка при регистрации";
             errorDiv.classList.remove("hidden");
         }
     } catch (err) {
-        console.error("Ошибка регистрации:", err);
+        console.error("Ошибка при регистрации:", err);
     }
 }
 
 function handleAuthSuccess(data) {
     currentUserProfile = data.profile;
     
-    // Обновляем верхнюю панель
+    // Перерисовываем блок логина в шапке
     document.getElementById("authSection").innerHTML = `
-        <div class="flex items-center gap-3">
-            <span class="text-xs bg-blue-900/50 px-2 py-1 rounded border border-cyan-400/30">👤 ${currentUserProfile["ФИО"]}</span>
-            <button onclick="logout()" class="text-xs text-red-200 underline cursor-pointer hover:text-white">Выйти</button>
+        <div class="flex items-center gap-2">
+            <span class="text-xs bg-slate-800 border border-blue-400 text-cyan-300 px-2 py-1 rounded-md font-mono">👤 ${currentUserProfile["ФИО"]}</span>
+            <button onclick="logout()" class="text-xs text-red-300 hover:text-red-100 underline cursor-pointer">Выйти</button>
         </div>
     `;
 
-    // Показываем электронный паспорт исследователя
+    // Заполняем и открываем электронный паспорт
     const dashboard = document.getElementById("profileDashboard");
     const grid = document.getElementById("profileDetailsGrid");
-    dashboard.classList.remove("hidden");
-    
-    grid.innerHTML = Object.entries(currentUserProfile).map(([key, value]) => `
-        <div class="bg-white p-2 rounded border border-blue-100">
-            <span class="text-gray-400 block text-[10px] uppercase font-semibold">${key}</span>
-            <span class="font-medium text-gray-800">${value}</span>
-        </div>
-    `).join('');
+    if (dashboard && grid) {
+        dashboard.classList.remove("hidden");
+        grid.innerHTML = Object.entries(currentUserProfile).map(([key, value]) => `
+            <div class="bg-slate-800/80 p-2 rounded border border-slate-700/60 shadow-inner">
+                <span class="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">${key}</span>
+                <span class="font-medium text-gray-200 text-xs">${value}</span>
+            </div>
+        `).join('');
+    }
 
-    // Активируем кнопку кабинета модератора, если роль позволяет
+    // Активируем кнопку кабинета, если вошел аккаунт с правами модератора
     if (data.role === 'moderator') {
         const btn = document.getElementById("adminPanelBtn");
-        btn.removeAttribute("disabled");
-        btn.classList.remove("opacity-40", "cursor-not-allowed");
-        btn.classList.add("bg-indigo-600", "text-white", "hover:bg-indigo-700");
+        if (btn) {
+            btn.removeAttribute("disabled");
+            btn.classList.remove("opacity-40", "cursor-not-allowed", "text-gray-400");
+            btn.classList.add("bg-indigo-600", "text-white", "hover:bg-indigo-700", "shadow-md", "cursor-pointer");
+        }
     }
     renderApp();
 }
 
-// Функция модерации (для админов)
-async function moderatePoint(id, status) {
+// --- УПРАВЛЕНИЕ КАБИНЕТОМ МОДЕРАТОРА ---
+
+function openModeratorModal() {
+    document.getElementById("moderatorModal").classList.remove("hidden");
+    renderModerationQueue();
+}
+
+function closeModeratorModal() {
+    document.getElementById("moderatorModal").classList.add("hidden");
+}
+
+function renderModerationQueue() {
+    const queueContainer = document.getElementById("moderationQueueList");
+    if (!queueContainer) return;
+
+    // Ищем точки со статусом "checking"
+    const checkingPoints = loadedSources.filter(item => item.status === "checking");
+
+    if (checkingPoints.length === 0) {
+        queueContainer.innerHTML = `
+            <div class="text-center py-10 text-gray-400 border border-dashed rounded-xl bg-gray-50">
+                🎉 Отлично! Новых заявок на проверку нет. Очередь пуста.
+            </div>
+        `;
+        return;
+    }
+
+    queueContainer.innerHTML = checkingPoints.map(item => `
+        <div class="p-3 border border-gray-200 rounded-xl bg-slate-50 flex flex-col md:flex-row justify-between gap-3 items-start md:items-center">
+            <div class="space-y-1 flex-grow">
+                <h4 class="font-bold text-gray-800 text-sm">${item.name}</h4>
+                <p class="text-gray-500">📍 Местоположение: ${item.location}</p>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px] bg-white p-2 rounded-lg border border-gray-100 mt-1 text-gray-600 font-mono">
+                    <div><strong>pH:</strong> ${item.ph}</div>
+                    <div><strong>Мин:</strong> ${item.mineralization} мг/л</div>
+                    <div><strong>Провод:</strong> ${item.conductivity}</div>
+                    <div><strong>Жестк:</strong> ${item.hardness}</div>
+                    <div><strong>Темп:</strong> ${item.temp}°C</div>
+                </div>
+                <p class="text-[11px] text-gray-400">👤 Отправитель: ${item.author} | Примеси: ${item.impurities}</p>
+            </div>
+            <div class="flex gap-2 shrink-0 w-full md:w-auto justify-end border-t pt-2 md:border-t-0 md:pt-0">
+                <button onclick="moderatePointInCabinet(${item.id}, 'suitable')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold transition text-xs cursor-pointer">
+                    💚 Одобрить
+                </button>
+                <button onclick="moderatePointInCabinet(${item.id}, 'unsuitable')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold transition text-xs cursor-pointer">
+                    ❌ Отклонить
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function moderatePointInCabinet(id, status) {
     try {
         const response = await fetch(`${BACKEND_URL}/api/sources/moderate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, status })
         });
+        
         if (response.ok) {
-            alert("Статус точки успешно обновлен!");
-            await loadPointsFromServer();
+            alert(`Статус точки успешно обновлен: ${status === 'suitable' ? 'Подходит' : 'Не подходит'}`);
+            await loadPointsFromServer(); // Перечитываем новые данные
+            renderModerationQueue();      // Обновляем список в открытом кабинете
+        } else {
+            alert("Сервер отклонил операцию модерации.");
         }
     } catch (err) {
-        console.error(err);
+        console.error("Ошибка при модерации источника:", err);
     }
 }
 
@@ -335,7 +389,7 @@ function logout() {
     window.location.reload();
 }
 
-// --- УПРАВЛЕНИЕ МОДАЛЬНЫМИ ОКНАМИ ---
+// --- ХЕЛПЕРЫ ДЛЯ ОТКРЫТИЯ/ЗАКРЫТИЯ МОДАЛОК ---
 function openAuthModal() { document.getElementById("authModal").classList.remove("hidden"); }
 function closeAuthModal() { document.getElementById("authModal").classList.add("hidden"); }
 function openAddPointModal() { document.getElementById("addPointModal").classList.remove("hidden"); }
