@@ -73,38 +73,45 @@ function renderApp() {
 }
 
 // Отображение списка элементов на левой боковой панели
+// Отображение списка элементов на левой боковой панели (ТЕМНАЯ ТЕМА)
 function renderList(items) {
     const listContainer = document.getElementById("sourcesList");
     if (!listContainer) return;
     
     if (items.length === 0) {
-        listContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Источники не найдены</p>';
+        listContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-6 font-mono tracking-wider">ЛОКАЦИИ НЕ НАЙДЕНЫ</p>';
         return;
     }
 
     listContainer.innerHTML = items.map(item => {
-        let statusBadge = item.status === 'suitable' ? '💚' : item.status === 'checking' ? '💛' : '❌';
+        let statusBadge = item.status === 'suitable' ? '<span class="text-emerald-400 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/25 font-mono">ПОДХОДИТ</span>' : 
+                          item.status === 'checking' ? '<span class="text-amber-400 text-[10px] bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/25 font-mono font-bold">АНАЛИЗ</span>' : 
+                                                       '<span class="text-rose-400 text-[10px] bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/25 font-mono">ОТКЛОНЕН</span>';
+        
+        // Стили изменены на bg-slate-950 и border-slate-900 для интеграции в темный интерфейс
         return `
-            <div onclick="selectSource(${item.id})" class="p-2 border rounded-lg cursor-pointer hover:bg-gray-100 text-xs transition flex justify-between items-center ${currentSelectedId === item.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-100'}">
-                <div>
-                    <h4 class="font-bold text-gray-700">${item.name}</h4>
-                    <p class="text-gray-400 text-[10px]">${item.type} • ${item.district || 'Алматы'}</p>
+            <div onclick="selectSource(${item.id})" class="p-3 border rounded-xl cursor-pointer hover:bg-slate-800/80 text-xs transition-all flex justify-between items-center gap-2 ${currentSelectedId === item.id ? 'bg-slate-800 border-amber-500/60 shadow-lg shadow-amber-500/5' : 'bg-slate-950 border-slate-900'}">
+                <div class="truncate">
+                    <h4 class="font-bold text-white truncate">${item.name}</h4>
+                    <p class="text-slate-500 text-[10px] uppercase tracking-wider mt-0.5">${item.type} • ${item.district || 'Алматы'}</p>
                 </div>
-                <span class="text-sm select-none">${statusBadge}</span>
+                <div class="shrink-0 font-mono">${statusBadge}</div>
             </div>
         `;
     }).join('');
 }
 
 // Отрисовка гео-точек и кластеров на Яндекс Картах
+// Отрисовка гео-точек и кластеров на Яндекс Картах
 function renderMapMarkers(items) {
     if (!geoObjectsCollection) return;
     geoObjectsCollection.removeAll();
     
     items.forEach(item => {
-        let presetColor = 'islands#yellowWaterIcon'; // По умолчанию на проверке
-        if (item.status === 'suitable') presetColor = 'islands#greenWaterIcon';
-        if (item.status === 'unsuitable') presetColor = 'islands#redWaterIcon';
+        // Исправлено: заменены несуществующие пресеты WaterIcon на стандартные цветные Icon
+        let presetColor = 'islands#yellowIcon'; // На проверке 💛
+        if (item.status === 'suitable') presetColor = 'islands#greenIcon'; // Подходит 💚
+        if (item.status === 'unsuitable') presetColor = 'islands#redIcon'; // Не подходит ❌
 
         const placemark = new ymaps.Placemark([item.lat, item.lng], {
             balloonContentHeader: `<strong class="text-blue-800">${item.name}</strong>`,
