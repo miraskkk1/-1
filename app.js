@@ -6,25 +6,31 @@ let geoObjectsCollection;
 let loadedSources = [];
 let currentUserProfile = null;
 
+// Инициализация при полной загрузке карт Яндекс
 ymaps.ready(initYandexMap);
 
 async function initYandexMap() {
-    // Центрирование карты с адаптивным зумом
-    myMap = new ymaps.Map("map", {
-        center: [43.2389, 76.8897],
-        zoom: 11,
-        controls: ['zoomControl', 'typeSelector']
-    });
+    try {
+        myMap = new ymaps.Map("map", {
+            center: [43.2389, 76.8897],
+            zoom: 11,
+            controls: ['zoomControl', 'typeSelector']
+        });
 
-    geoObjectsCollection = new ymaps.GeoObjectCollection();
-    myMap.geoObjects.add(geoObjectsCollection);
+        geoObjectsCollection = new ymaps.GeoObjectCollection();
+        myMap.geoObjects.add(geoObjectsCollection);
 
-    document.getElementById("searchQuery").addEventListener("input", renderApp);
-    document.getElementById("filterStatus").addEventListener("change", renderApp);
-    document.getElementById("filterType").addEventListener("change", renderApp);
+        // Вешаем слушатели событий фильтрации интерфейса
+        document.getElementById("searchQuery").addEventListener("input", renderApp);
+        document.getElementById("filterStatus").addEventListener("change", renderApp);
+        document.getElementById("filterType").addEventListener("change", renderApp);
 
-    await checkBackendSession();
-    await loadPointsFromServer();
+        // Первичные проверки сессии и загрузка
+        await checkBackendSession();
+        await loadPointsFromServer();
+    } catch (e) {
+        console.error("Ошибка при инициализации карты: ", e);
+    }
 }
 
 async function loadPointsFromServer() {
@@ -33,7 +39,6 @@ async function loadPointsFromServer() {
         loadedSources = await response.json();
 
         if (loadedSources.length === 0 && typeof initialSources !== 'undefined' && initialSources.length > 0) {
-            console.log("Синхронизация базовых точек...");
             await fetch(`${BACKEND_URL}/api/sources/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -42,7 +47,6 @@ async function loadPointsFromServer() {
             response = await fetch(`${BACKEND_URL}/api/sources`);
             loadedSources = await response.json();
         }
-
         renderApp();
     } catch (err) {
         console.error("Ошибка сети при загрузке данных:", err);
@@ -67,7 +71,6 @@ function renderApp() {
     renderMapMarkers(filtered);
 }
 
-// Рендеринг элементов списка во флоатинг-сайдбар (скрыт на мобильных, управляется картой)
 function renderList(items) {
     const listContainer = document.getElementById("sourcesList");
     if (!listContainer) return;
@@ -78,16 +81,16 @@ function renderList(items) {
     }
 
     listContainer.innerHTML = items.map(item => {
-        let statusBadge = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-900/40">Подходит</span>' : 
-                          item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-900/40">Анализ</span>' : 
-                                                       '<span class="text-rose-600 dark:text-rose-400 text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-900/40">Отклонен</span>';
+        let statusBadge = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200">Подходит</span>' : 
+                          item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-200">Анализ</span>' : 
+                                                       '<span class="text-rose-600 dark:text-rose-400 text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-md border border-rose-200">Отклонен</span>';
         
         const isSelected = currentSelectedId === item.id;
         return `
             <div onclick="selectSource(${item.id})" class="p-3 bg-white/95 dark:bg-slate-950/95 border rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/80 text-xs transition-all flex justify-between items-center gap-3 shadow-sm pointer-events-auto ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200 dark:border-slate-800/80'}" style="backdrop-blur: 4px;">
                 <div class="truncate">
                     <h4 class="font-semibold text-slate-900 dark:text-white truncate">${item.name}</h4>
-                    <p class="text-slate-400 text-[10px] mt-0.5">${item.type} • ${item.district || 'Алматы'}</p>
+                    <p class="text-slate-400 text-[10px] mt-0.5">${item.type} • ${item.location}</p>
                 </div>
                 <div class="shrink-0">${statusBadge}</div>
             </div>
@@ -116,18 +119,8 @@ function renderMapMarkers(items) {
     });
 }
 
-// Открытие карточки в стиле аккуратного 2ГИС-компонента
 function selectSource(id) {
     currentSelectedId = id;
-    
-    const query = document.getElementById("searchQuery").value.toLowerCase();
-    const filterStatus = document.getElementById("filterStatus").value;
-    const filterType = document.getElementById("filterType").value;
-    const filtered = loadedSources.filter(item => {
-        const matchesSearch = (item.name && item.name.toLowerCase().includes(query)) || (item.location && item.location.toLowerCase().includes(query));
-        return matchesSearch && (filterStatus === "all" || item.status === filterStatus) && (filterType === "all" || item.type === filterType);
-    });
-    renderList(filtered);
     
     const item = loadedSources.find(p => p.id === id);
     if (!item) return;
@@ -140,13 +133,13 @@ function selectSource(id) {
                          item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 text-[10px]">💛 Анализ</span>' : 
                                                       '<span class="text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md border border-rose-200 text-[10px]">❌ Отклонен</span>';
 
-        // Адаптивная структура: на мобильных — ультра-компактно, на ПК — развернуто
+        // Ультра-компактная карточка, сохраняющая обзор карты на мобильных
         container.innerHTML = `
             <div class="pr-6 flex items-start justify-between gap-2">
                 <div>
                     <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">${item.type}</span>
                     <h3 class="text-sm md:text-base font-bold text-slate-900 dark:text-white leading-tight mt-0.5">${item.name}</h3>
-                    <p class="text-[11px] text-slate-500 mt-0.5 truncate max-w-[280px] md:max-w-none">📍 ${item.location}</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5 truncate max-w-[240px] md:max-w-none">📍 ${item.location}</p>
                 </div>
                 <div class="shrink-0 mt-1">${statusText}</div>
             </div>
@@ -159,17 +152,15 @@ function selectSource(id) {
             </div>
 
             <div class="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 mt-2.5 flex justify-between items-center">
-                <p class="truncate max-w-[180px]">🔬 Примеси: <span class="text-slate-800 dark:text-slate-200 font-medium">${item.impurities}</span></p>
+                <p class="truncate max-w-[180px]">🔬 Осадок: <span class="text-slate-800 dark:text-slate-200 font-medium">${item.impurities}</span></p>
                 <p class="text-right text-[9px] text-slate-400">Лаборант: ${item.author}</p>
             </div>
         `;
         
         wrapper.classList.remove("translate-y-full");
         
-        // Умный фокус: на мобилках смещаем карту чуть сильнее вниз (`item.lat - 0.004`), чтобы маркер вставал ровно в свободную верхнюю часть экрана
         const isMobile = window.innerWidth < 768;
-        const targetLat = isMobile ? item.lat - 0.004 : item.lat; 
-        
+        const targetLat = isMobile ? item.lat - 0.003 : item.lat; 
         myMap.setCenter([targetLat, item.lng], 14, { duration: 300 });
     }
 }
@@ -197,7 +188,7 @@ async function handleCreatePoint(event) {
         conductivity: parseInt(document.getElementById("addCond").value) || 0,
         hardness: parseFloat(document.getElementById("addHard").value) || 0,
         temp: parseInt(document.getElementById("addTemp").value) || 0,
-        impurities: document.getElementById("addImpurities").value || "Требуется лабораторный анализ",
+        impurities: document.getElementById("addImpurities").value || "Нет",
         author: authorName
     };
 
@@ -221,8 +212,6 @@ async function handleCreatePoint(event) {
         alert("Ошибка соединения с сервером.");
     }
 }
-
-// --- УПРАВЛЕНИЕ СЕССИЯМИ ---
 
 async function checkBackendSession() {
     const token = localStorage.getItem("token");
@@ -371,11 +360,12 @@ async function handleAssignModerator() {
 }
 
 function logout() { localStorage.removeItem("token"); window.location.reload(); }
-function openAddPointModal() { document.getElementById("addPointModal").classList.remove("hidden"); }
-function closeAddPointModal() { document.getElementById("addPointModal").classList.add("hidden"); }
-// [Остальные хелперы окон openAuthModal, closeAuthModal, toggleToRegister, toggleToLogin остаются без изменений]
-function openAuthModal() { document.getElementById("authModal").classList.remove("hidden"); }
-function closeAuthModal() { document.getElementById("authModal").classList.add("hidden"); }
+
+// ГАРАНТИРОВАННО РАБОЧИЕ ХЕЛПЕРЫ МОДАЛЬНЫХ ОКОН
+function openAddPointModal() { const m = document.getElementById("addPointModal"); if(m) m.classList.remove("hidden"); }
+function closeAddPointModal() { const m = document.getElementById("addPointModal"); if(m) m.classList.add("hidden"); }
+function openAuthModal() { const m = document.getElementById("authModal"); if(m) m.classList.remove("hidden"); }
+function closeAuthModal() { const m = document.getElementById("authModal"); if(m) m.classList.add("hidden"); }
 function toggleToRegister() {
     document.getElementById("authModalTitle").innerText = "Регистрация";
     document.getElementById("loginFormSubmits").classList.add("hidden");
