@@ -1,4 +1,4 @@
-xconst BACKEND_URL = "https://1-1-5hl5.onrender.com";
+const BACKEND_URL = "https://1-1-5hl5.onrender.com";
 
 let myMap;
 let currentSelectedId = null;
@@ -6,7 +6,6 @@ let geoObjectsCollection;
 let loadedSources = [];
 let currentUserProfile = null;
 
-// Инициализация при полной загрузке карт Яндекс
 ymaps.ready(initYandexMap);
 
 async function initYandexMap() {
@@ -20,16 +19,14 @@ async function initYandexMap() {
         geoObjectsCollection = new ymaps.GeoObjectCollection();
         myMap.geoObjects.add(geoObjectsCollection);
 
-        // Вешаем слушатели событий фильтрации интерфейса
         document.getElementById("searchQuery").addEventListener("input", renderApp);
         document.getElementById("filterStatus").addEventListener("change", renderApp);
         document.getElementById("filterType").addEventListener("change", renderApp);
 
-        // Первичные проверки сессии и загрузка
         await checkBackendSession();
         await loadPointsFromServer();
     } catch (e) {
-        console.error("Ошибка при инициализации карты: ", e);
+        console.error("Ошибка инициализации карт:", e);
     }
 }
 
@@ -49,7 +46,7 @@ async function loadPointsFromServer() {
         }
         renderApp();
     } catch (err) {
-        console.error("Ошибка сети при загрузке данных:", err);
+        console.error("Ошибка при получении точек:", err);
     }
 }
 
@@ -118,61 +115,63 @@ function renderMapMarkers(items) {
         geoObjectsCollection.add(placemark);
     });
 }
-// Выбор источника и отображение карточки расширенных лабораторных данных
+
 function selectSource(id) {
     currentSelectedId = id;
-    renderApp(); 
     
     const item = loadedSources.find(p => p.id === id);
     if (!item) return;
 
-    const detailsCard = document.getElementById("detailsCard");
-    const placeholder = document.getElementById("noSelectPlaceholder");
+    const wrapper = document.getElementById("detailsWrapper");
+    const container = document.getElementById("detailsCard");
     
-    if (placeholder) placeholder.classList.add("hidden");
-    if (detailsCard) {
-        detailsCard.classList.remove("hidden");
+    if (container && wrapper) {
+        container.classList.remove("hidden");
         
         let statusText = item.status === 'suitable' ? '<span class="text-emerald-400 font-bold font-mono bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/30 text-[11px] tracking-wide uppercase">💚 Подходит</span>' : 
                          item.status === 'checking' ? '<span class="text-amber-400 font-bold font-mono bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30 text-[11px] tracking-wide uppercase">💛 Анализ</span>' : 
                                                       '<span class="text-rose-400 font-bold font-mono bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/30 text-[11px] tracking-wide uppercase">❌ Отклонен</span>';
 
-        detailsCard.innerHTML = `
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-slate-800 pb-4 gap-3">
+        container.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-slate-800 pb-3 gap-3 pr-6">
                 <div>
-                    <h3 class="text-lg font-bold text-white font-mono tracking-wide">${item.name}</h3>
-                    <p class="text-xs text-slate-400 mt-1">📍 Ориентир: <span class="text-slate-300">${item.location}</span></p>
+                    <h3 class="text-base font-bold text-white font-mono tracking-wide">${item.name}</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">📍 Ориентир: <span class="text-slate-300">${item.location}</span></p>
                 </div>
                 <div class="shrink-0">${statusText}</div>
             </div>
             
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mt-3">
-                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800/60 mt-3">
+                <div class="space-y-0.5 bg-slate-900/60 p-2 rounded-lg border border-slate-800/40">
                     <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Водородный pH</span> 
-                    <strong class="text-sm font-mono text-amber-400 block">pH ${item.ph}</strong>
+                    <strong class="text-xs font-mono text-amber-400 block">pH ${item.ph}</strong>
                 </div>
-                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+                <div class="space-y-0.5 bg-slate-900/60 p-2 rounded-lg border border-slate-800/40">
                     <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Минерализация</span> 
-                    <strong class="text-sm font-mono text-white block">${item.mineralization} <span class="text-[10px] text-slate-400 font-normal">мг/л</span></strong>
+                    <strong class="text-xs font-mono text-white block">${item.mineralization} <span class="text-[9px] text-slate-400 font-normal">мг/л</span></strong>
                 </div>
-                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+                <div class="space-y-0.5 bg-slate-900/60 p-2 rounded-lg border border-slate-800/40">
                     <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Проводимость</span> 
-                    <strong class="text-sm font-mono text-white block">${item.conductivity} <span class="text-[10px] text-slate-400 font-normal">мкСм</span></strong>
+                    <strong class="text-xs font-mono text-white block">${item.conductivity} <span class="text-[9px] text-slate-400 font-normal">мкСм</span></strong>
                 </div>
-                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
-                    <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Общая жёсткость</span> 
-                    <strong class="text-sm font-mono text-white block">${item.hardness} <span class="text-[10px] text-slate-400 font-normal">мг-экв</span></strong>
+                <div class="space-y-0.5 bg-slate-900/60 p-2 rounded-lg border border-slate-800/40">
+                    <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Жёсткость</span> 
+                    <strong class="text-xs font-mono text-white block">${item.hardness} <span class="text-[9px] text-slate-400 font-normal">мг-экв</span></strong>
                 </div>
             </div>
             
-            <div class="text-xs space-y-2 text-slate-300 pt-3 font-mono">
-                <p><span class="text-slate-500">Температура воды:</span> <span class="text-white font-medium">${item.temp} °C</span></p>
-                <p><span class="text-slate-500">Примеси / Осадок:</span> <span class="text-white font-medium">${item.impurities}</span></p>
-                <p><span class="text-slate-500">Лаборант:</span> <span class="text-amber-400 font-medium">${item.author}</span> <span class="text-[10px] text-slate-500">(${item.date || '2026'})</span></p>
+            <div class="text-[11px] space-y-1 text-slate-300 pt-3 font-mono">
+                <p><span class="text-slate-500">🌡️ Температура:</span> <span class="text-white font-medium">${item.temp} °C</span></p>
+                <p><span class="text-slate-500">🔬 Примеси/Осадок:</span> <span class="text-white font-medium">${item.impurities}</span></p>
+                <p><span class="text-slate-500">👤 Лаборант:</span> <span class="text-amber-400 font-medium">${item.author}</span></p>
             </div>
         `;
         
-        myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
+        wrapper.classList.remove("translate-y-full");
+        
+        const isMobile = window.innerWidth < 768;
+        const targetLat = isMobile ? item.lat - 0.003 : item.lat; 
+        if (myMap) myMap.setCenter([targetLat, item.lng], 14, { duration: 300 });
     }
 }
 
@@ -180,7 +179,6 @@ function closeDetailsCard() {
     const wrapper = document.getElementById("detailsWrapper");
     if (wrapper) wrapper.classList.add("translate-y-full");
     currentSelectedId = null;
-    renderApp();
 }
 
 async function handleCreatePoint(event) {
@@ -372,7 +370,6 @@ async function handleAssignModerator() {
 
 function logout() { localStorage.removeItem("token"); window.location.reload(); }
 
-// ГАРАНТИРОВАННО РАБОЧИЕ ХЕЛПЕРЫ МОДАЛЬНЫХ ОКОН
 function openAddPointModal() { const m = document.getElementById("addPointModal"); if(m) m.classList.remove("hidden"); }
 function closeAddPointModal() { const m = document.getElementById("addPointModal"); if(m) m.classList.add("hidden"); }
 function openAuthModal() { const m = document.getElementById("authModal"); if(m) m.classList.remove("hidden"); }
