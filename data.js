@@ -10,11 +10,11 @@ const initialSources = [
   },
   {
     id: 3, name: "Родник в Ботаническом саду", type: "Родник", district: "Бостандыкский район", location: "Гл. Ботанический сад",
-    lat: 43.2255, lng: 76.9250, status: "checking", ph: 7.1, mineralization: 210, conductivity: 280, hardness: 3.8, temp: 12, impurities: "Следы органики", author: "student1", date: "2026-06-12"
+    lat: 43.2255, lng: 76.9250, status: "checking", ph: 7.1, mineralization: 210, conductivity: 280, hardness: 3.8, temp: 12, impurities: "Следы органики", author: "Администратор", date: "2026-06-12"
   },
   {
     id: 4, name: "Скважина Аксай-3", type: "Скважина", district: "Ауэзовский район", location: "мкр. Аксай-3",
-    lat: 43.2205, lng: 76.8485, status: "suitable", ph: 7.3, mineralization: 250, conductivity: 320, hardness: 4.0, temp: 14, impurities: "Нет", author: "student1", date: "2026-06-13"
+    lat: 43.2205, lng: 76.8485, status: "suitable", ph: 7.3, mineralization: 250, conductivity: 320, hardness: 4.0, temp: 14, impurities: "Нет", author: "Администратор", date: "2026-06-13"
   },
   {
     id: 5, name: "Родник «Бастау»", type: "Родник", district: "Медеуский район", location: "Ущелье Бутаковка",
@@ -22,7 +22,7 @@ const initialSources = [
   },
   {
     id: 6, name: "Источник мкр. Дубок", type: "Родник", district: "Наурызбайский район", location: "Верхняя часть мкр. Дубок",
-    lat: 43.1850, lng: 76.8120, status: "checking", ph: 7.0, mineralization: 190, conductivity: 240, hardness: 3.1, temp: 9, impurities: "Нет", author: "student1", date: "2026-06-14"
+    lat: 43.1850, lng: 76.8120, status: "checking", ph: 7.0, mineralization: 190, conductivity: 240, hardness: 3.1, temp: 9, impurities: "Нет", author: "Администратор", date: "2026-06-14"
   },
   {
     id: 7, name: "Скважина Парк Первого Президента", type: "Скважина", district: "Бостандыкский район", location: "Угол Аль-Фараби - Навои",
@@ -34,7 +34,7 @@ const initialSources = [
   },
   {
     id: 9, name: "Колонка мкр. Мамыр", type: "Колонка", district: "Ауэзовский район", location: "мкр. Мамыр-4",
-    lat: 43.2120, lng: 76.8350, status: "unsuitable", ph: 6.8, mineralization: 400, conductivity: 550, hardness: 6.5, temp: 16, impurities: "Высокая жесткость", author: "student1", date: "2026-06-15"
+    lat: 43.2120, lng: 76.8350, status: "unsuitable", ph: 6.8, mineralization: 400, conductivity: 550, hardness: 6.5, temp: 16, impurities: "Высокая жесткость", author: "Администратор", date: "2026-06-15"
   },
   {
     id: 10, name: "Родник «Горный гигант»", type: "Родник", district: "Медеуский район", location: "мкр. Горный гигант",
