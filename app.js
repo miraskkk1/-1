@@ -6,38 +6,34 @@ let geoObjectsCollection;
 let loadedSources = [];
 let currentUserProfile = null;
 
-// Инициализация при полной загрузке карт Яндекс
 ymaps.ready(initYandexMap);
 
 async function initYandexMap() {
+    // Центрирование карты с адаптивным зумом
     myMap = new ymaps.Map("map", {
         center: [43.2389, 76.8897],
         zoom: 11,
-        controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
+        controls: ['zoomControl', 'typeSelector']
     });
 
     geoObjectsCollection = new ymaps.GeoObjectCollection();
     myMap.geoObjects.add(geoObjectsCollection);
 
-    // Вешаем слушатели событий фильтрации интерфейса
     document.getElementById("searchQuery").addEventListener("input", renderApp);
     document.getElementById("filterStatus").addEventListener("change", renderApp);
     document.getElementById("filterType").addEventListener("change", renderApp);
 
-    // Первичные проверки сессии и загрузка
     await checkBackendSession();
     await loadPointsFromServer();
 }
 
-// Загрузка точек с авто-инициализацией базы данных (в случае сброса сервера Render)
 async function loadPointsFromServer() {
     try {
         let response = await fetch(`${BACKEND_URL}/api/sources`);
         loadedSources = await response.json();
 
-        // СИНХРОНИЗАЦИЯ: Если бэкенд чистый, отправляем массив initialSources из data.js
         if (loadedSources.length === 0 && typeof initialSources !== 'undefined' && initialSources.length > 0) {
-            console.log("База данных сервера пуста. Отправляем стартовые точки из data.js...");
+            console.log("Синхронизация базовых точек...");
             await fetch(`${BACKEND_URL}/api/sources/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -49,11 +45,10 @@ async function loadPointsFromServer() {
 
         renderApp();
     } catch (err) {
-        console.error("Ошибка при получении данных с сервера:", err);
+        console.error("Ошибка сети при загрузке данных:", err);
     }
 }
 
-// Главная функция рендеринга интерфейса (Фильтрация + Поиск)
 function renderApp() {
     if (!loadedSources) return;
     const query = document.getElementById("searchQuery").value.toLowerCase();
@@ -72,45 +67,46 @@ function renderApp() {
     renderMapMarkers(filtered);
 }
 
-// Отображение списка элементов на левой боковой панели (КРАСИВАЯ ТЕМНАЯ ТЕМА)
+// Рендеринг элементов списка во флоатинг-сайдбар (скрыт на мобильных, управляется картой)
 function renderList(items) {
     const listContainer = document.getElementById("sourcesList");
     if (!listContainer) return;
     
     if (items.length === 0) {
-        listContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-6 font-mono tracking-wider">ЛОКАЦИИ НЕ НАЙДЕНЫ</p>';
+        listContainer.innerHTML = '<div class="p-4 bg-white dark:bg-slate-950 rounded-xl shadow border border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">Ничего не найдено</div>';
         return;
     }
 
     listContainer.innerHTML = items.map(item => {
-        let statusBadge = item.status === 'suitable' ? '<span class="text-emerald-400 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/25 font-mono">ПОДХОДИТ</span>' : 
-                          item.status === 'checking' ? '<span class="text-amber-400 text-[10px] bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/25 font-mono font-bold">АНАЛИЗ</span>' : 
-                                                       '<span class="text-rose-400 text-[10px] bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/25 font-mono">ОТКЛОНЕН</span>';
+        let statusBadge = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-900/40">Подходит</span>' : 
+                          item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-900/40">Анализ</span>' : 
+                                                       '<span class="text-rose-600 dark:text-rose-400 text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-900/40">Отклонен</span>';
+        
+        const isSelected = currentSelectedId === item.id;
         return `
-            <div onclick="selectSource(${item.id})" class="p-3 border rounded-xl cursor-pointer hover:bg-slate-800/80 text-xs transition-all flex justify-between items-center gap-2 ${currentSelectedId === item.id ? 'bg-slate-800 border-amber-500/60 shadow-lg shadow-amber-500/5' : 'bg-slate-950 border-slate-900'}">
+            <div onclick="selectSource(${item.id})" class="p-3 bg-white/95 dark:bg-slate-950/95 border rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/80 text-xs transition-all flex justify-between items-center gap-3 shadow-sm pointer-events-auto ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200 dark:border-slate-800/80'}" style="backdrop-blur: 4px;">
                 <div class="truncate">
-                    <h4 class="font-bold text-white truncate">${item.name}</h4>
-                    <p class="text-slate-500 text-[10px] uppercase tracking-wider mt-0.5">${item.type} • ${item.district || 'Алматы'}</p>
+                    <h4 class="font-semibold text-slate-900 dark:text-white truncate">${item.name}</h4>
+                    <p class="text-slate-400 text-[10px] mt-0.5">${item.type} • ${item.district || 'Алматы'}</p>
                 </div>
-                <div class="shrink-0 font-mono">${statusBadge}</div>
+                <div class="shrink-0">${statusBadge}</div>
             </div>
         `;
     }).join('');
 }
 
-// Отрисовка гео-точек и кластеров на Яндекс Картах (ЦВЕТНЫЕ МЕТКИ ВОССТАНОВЛЕНЫ)
 function renderMapMarkers(items) {
     if (!geoObjectsCollection) return;
     geoObjectsCollection.removeAll();
     
     items.forEach(item => {
-        let presetColor = 'islands#yellowIcon'; // На проверке 💛
-        if (item.status === 'suitable') presetColor = 'islands#greenIcon'; // Подходит 💚
-        if (item.status === 'unsuitable') presetColor = 'islands#redIcon'; // Не подходит ❌
+        let presetColor = 'islands#yellowIcon';
+        if (item.status === 'suitable') presetColor = 'islands#greenIcon';
+        if (item.status === 'unsuitable') presetColor = 'islands#redIcon';
 
         const placemark = new ymaps.Placemark([item.lat, item.lng], {
-            balloonContentHeader: `<strong class="text-blue-800">${item.name}</strong>`,
-            balloonContentBody: `<span class="text-xs">${item.type}<br>📍 ${item.location}</span>`
+            balloonContentHeader: `<strong style="color:#1e3a8a">${item.name}</strong>`,
+            balloonContentBody: `<span style="font-size:12px">${item.type}<br>📍 ${item.location}</span>`
         }, {
             preset: presetColor
         });
@@ -120,51 +116,71 @@ function renderMapMarkers(items) {
     });
 }
 
-// Выбор источника и отображение карточки расширенных лабораторных данных
+// Открытие карточки в стиле аккуратного 2ГИС-компонента
 function selectSource(id) {
     currentSelectedId = id;
-    renderApp(); 
+    
+    // Перерендер списка для обновления активного бордера
+    const query = document.getElementById("searchQuery").value.toLowerCase();
+    const filterStatus = document.getElementById("filterStatus").value;
+    const filterType = document.getElementById("filterType").value;
+    const filtered = loadedSources.filter(item => {
+        const matchesSearch = (item.name && item.name.toLowerCase().includes(query)) || (item.location && item.location.toLowerCase().includes(query));
+        return matchesSearch && (filterStatus === "all" || item.status === filterStatus) && (filterType === "all" || item.type === filterType);
+    });
+    renderList(filtered);
     
     const item = loadedSources.find(p => p.id === id);
     if (!item) return;
 
-    const detailsCard = document.getElementById("detailsCard");
-    const placeholder = document.getElementById("noSelectPlaceholder");
+    const wrapper = document.getElementById("detailsWrapper");
+    const container = document.getElementById("detailsCard");
     
-    if (placeholder) placeholder.classList.add("hidden");
-    if (detailsCard) {
-        detailsCard.classList.remove("hidden");
-        
-        let statusText = item.status === 'suitable' ? '<span class="text-emerald-400 font-bold font-mono bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/30 text-[11px] tracking-wide uppercase">💚 Подходит для электролиза</span>' : 
-                         item.status === 'checking' ? '<span class="text-amber-400 font-bold font-mono bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30 text-[11px] tracking-wide uppercase">💛 На проверке</span>' : 
-                                                      '<span class="text-rose-400 font-bold font-mono bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/30 text-[11px] tracking-wide uppercase">❌ Не подходит</span>';
+    if (container && wrapper) {
+        let statusText = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg border border-emerald-200 dark:border-emerald-900/30 text-[11px]">💚 Подходит</span>' : 
+                         item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-900/30 text-[11px]">💛 На проверке</span>' : 
+                                                      '<span class="text-rose-600 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-950/40 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/30 text-[11px]">❌ Не подходит</span>';
 
-        detailsCard.innerHTML = `
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-slate-800/80 pb-4 gap-3">
-                <div>
-                    <h3 class="text-lg font-bold text-white font-mono tracking-wide">${item.name}</h3>
-                    <p class="text-xs text-gray-400 mt-1">📍 Ориентир: <span class="text-slate-300">${item.location}</span></p>
-                </div>
-                <div class="shrink-0">${statusText}</div>
+        container.innerHTML = `
+            <div class="pr-6">
+                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">${item.type}</span>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white mt-0.5">${item.name}</h3>
+                <p class="text-xs text-slate-500 mt-1">📍 Ориентир: <span class="text-slate-700 dark:text-slate-300">${item.location}</span></p>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800/80 mt-3">
-                <div class="space-y-0.5"><span class="text-slate-500 block text-[10px] uppercase tracking-wider">Водородный индекс:</span> <strong class="text-sm font-mono text-amber-400">pH ${item.ph}</strong></div>
-                <div class="space-y-0.5"><span class="text-slate-500 block text-[10px] uppercase tracking-wider">Минерализация:</span> <strong class="text-sm font-mono text-white">${item.mineralization} мг/л</strong></div>
-                <div class="space-y-0.5"><span class="text-slate-500 block text-[10px] uppercase tracking-wider">Проводимость:</span> <strong class="text-sm font-mono text-white">${item.conductivity} мкСм/см</strong></div>
-                <div class="space-y-0.5"><span class="text-slate-500 block text-[10px] uppercase tracking-wider">Общая жёсткость:</span> <strong class="text-sm font-mono text-white">${item.hardness} мг-экв/л</strong></div>
+            
+            <div class="mt-3 flex items-center gap-2">
+                ${statusText}
             </div>
-            <div class="text-xs space-y-2 text-slate-300 pt-3 font-mono">
-                <p><span class="text-slate-500">🌡️ Температура воды на выходе:</span> <span class="text-white">${item.temp} °C</span></p>
-                <p><span class="text-slate-500">🔬 Характер примесей / Осадок:</span> <span class="text-white">${item.impurities}</span></p>
-                <p><span class="text-slate-500">👤 Исследователь-лаборант:</span> <span class="text-amber-400">${item.author}</span> <span class="text-[10px] text-slate-500">(${item.date || '2026'})</span></p>
+
+            <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 mt-4">
+                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Водородный индекс</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">pH ${item.ph}</strong></div>
+                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Минерализация</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">${item.mineralization} мг/л</strong></div>
+                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Проводимость</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">${item.conductivity} мкСм</strong></div>
+                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Общая жёсткость</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">${item.hardness} мг-экв</strong></div>
+            </div>
+
+            <div class="text-[11px] space-y-1.5 text-slate-600 dark:text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4">
+                <p>🌡️ Температура воды: <span class="text-slate-900 dark:text-white font-medium">${item.temp} °C</span></p>
+                <p>🔬 Примеси / Осадок: <span class="text-slate-900 dark:text-white font-medium">${item.impurities}</span></p>
+                <p>👤 Лаборант: <span class="text-slate-900 dark:text-white font-medium">${item.author} (${item.date || '2026'})</span></p>
             </div>
         `;
         
+        // Выдвигаем карточку
+        wrapper.classList.remove("translate-y-full");
+        
+        // Смещаем карту к центру выбранного источника с отступом под панель
         myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
     }
 }
 
-// Отправка формы создания новой точки (Оформление заказа на исследование)
+function closeDetailsCard() {
+    const wrapper = document.getElementById("detailsWrapper");
+    if (wrapper) wrapper.classList.add("translate-y-full");
+    currentSelectedId = null;
+    renderApp();
+}
+
 async function handleCreatePoint(event) {
     event.preventDefault();
     const authorName = currentUserProfile ? currentUserProfile["ФИО"] : "Заказчик (Студент)";
@@ -193,20 +209,20 @@ async function handleCreatePoint(event) {
         });
         
         if (response.ok) {
-            alert("Заказ на сумму 20 000 ₸ успешно оформлен! Заявка направлена в лабораторию Юткина. Точка отобразится на карте со статусом АНАЛИЗ.");
+            alert("Исследование успешно оплачено и оформлено!");
             closeAddPointModal();
-            event.target.reset(); // Полностью очищаем поля формы ввода
+            event.target.reset();
             await loadPointsFromServer();
         } else {
-            alert("Ошибка сохранения заказа сервером.");
+            alert("Ошибка сохранения заказа.");
         }
     } catch (err) {
-        console.error("Сбой сети при отправке заказа:", err);
-        alert("Ошибка соединения с бэкенд сервером.");
+        console.error(err);
+        alert("Ошибка соединения с сервером.");
     }
 }
 
-// --- СИСТЕМА АВТОРИЗАЦИИ, СЕССИЙ И СЕКЬЮРНОСТИ ---
+// --- УПРАВЛЕНИЕ СЕССИЯМИ ---
 
 async function checkBackendSession() {
     const token = localStorage.getItem("token");
@@ -223,7 +239,7 @@ async function checkBackendSession() {
             localStorage.removeItem("token");
         }
     } catch (err) {
-        console.error("Сервер авторизации недоступен:", err);
+        console.error(err);
     }
 }
 
@@ -245,11 +261,11 @@ async function handleBackendLogin() {
             handleAuthSuccess(data);
             closeAuthModal();
         } else {
-            errorDiv.innerText = data.message || "Неверный логин или пароль";
+            errorDiv.innerText = data.message || "Неверные данные";
             errorDiv.classList.remove("hidden");
         }
     } catch (err) {
-        console.error("Ошибка при авторизации:", err);
+        console.error(err);
     }
 }
 
@@ -264,17 +280,15 @@ async function handleBackendRegister() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
-        const data = await response.json();
-
         if (response.ok) {
-            alert("Регистрация успешна! Войдите под своими учетными данными.");
+            alert("Регистрация успешна!");
             toggleToLogin();
         } else {
-            errorDiv.innerText = data.message || "Ошибка при регистрации";
+            errorDiv.innerText = "Ошибка регистрации";
             errorDiv.classList.remove("hidden");
         }
     } catch (err) {
-        console.error("Ошибка при регистрации:", err);
+        console.error(err);
     }
 }
 
@@ -283,8 +297,8 @@ function handleAuthSuccess(data) {
     
     document.getElementById("authSection").innerHTML = `
         <div class="flex items-center gap-2">
-            <span class="text-xs bg-slate-800 border border-blue-400 text-cyan-300 px-2 py-1 rounded-md font-mono">👤 ${currentUserProfile["ФИО"]}</span>
-            <button onclick="logout()" class="text-xs text-red-300 hover:text-red-100 underline cursor-pointer">Выйти</button>
+            <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">👤 ${currentUserProfile["ФИО"]}</span>
+            <button onclick="logout()" class="text-[11px] text-red-500 hover:underline cursor-pointer">Выйти</button>
         </div>
     `;
 
@@ -292,60 +306,35 @@ function handleAuthSuccess(data) {
         const btn = document.getElementById("adminPanelBtn");
         if (btn) {
             btn.removeAttribute("disabled");
-            btn.classList.remove("opacity-40", "cursor-not-allowed", "text-gray-400");
-            btn.classList.add("bg-indigo-600", "text-white", "hover:bg-indigo-700", "shadow-md", "cursor-pointer");
+            btn.classList.remove("opacity-0", "pointer-events-none");
+            btn.classList.add("bg-white", "dark:bg-slate-950", "text-slate-900", "dark:text-white", "cursor-pointer");
         }
     }
     renderApp();
 }
 
-// --- УПРАВЛЕНИЕ КАБИНЕТОМ МОДЕРАТОРА ---
-
-function openModeratorModal() {
-    document.getElementById("moderatorModal").classList.remove("hidden");
-    renderModerationQueue();
-}
-
-function closeModeratorModal() {
-    document.getElementById("moderatorModal").classList.add("hidden");
-}
+function openModeratorModal() { document.getElementById("moderatorModal").classList.remove("hidden"); renderModerationQueue(); }
+function closeModeratorModal() { document.getElementById("moderatorModal").classList.add("hidden"); }
 
 function renderModerationQueue() {
     const queueContainer = document.getElementById("moderationQueueList");
     if (!queueContainer) return;
-
     const checkingPoints = loadedSources.filter(item => item.status === "checking");
 
     if (checkingPoints.length === 0) {
-        queueContainer.innerHTML = `
-            <div class="text-center py-10 text-gray-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/40 font-mono">
-                🎉 Очередь пуста! Новых заказов на модерацию нет.
-            </div>
-        `;
+        queueContainer.innerHTML = '<div class="text-center py-6 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">Очередь пуста</div>';
         return;
     }
 
     queueContainer.innerHTML = checkingPoints.map(item => `
-        <div class="p-4 border border-slate-800 rounded-xl bg-slate-950 flex flex-col md:flex-row justify-between gap-3 items-start md:items-center shadow-lg">
-            <div class="space-y-1 flex-grow">
-                <h4 class="font-bold text-white text-sm font-mono">${item.name}</h4>
-                <p class="text-slate-400">📍 Местоположение: ${item.location}</p>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px] bg-slate-900 p-2 rounded-lg border border-slate-800 mt-1 text-slate-300 font-mono">
-                    <div><strong>pH:</strong> ${item.ph}</div>
-                    <div><strong>Мин:</strong> ${item.mineralization} мг/л</div>
-                    <div><strong>Провод:</strong> ${item.conductivity}</div>
-                    <div><strong>Жестк:</strong> ${item.hardness}</div>
-                    <div><strong>Темп:</strong> ${item.temp}°C</div>
-                </div>
-                <p class="text-[11px] text-slate-500 mt-1">👤 Заказчик: ${item.author} | Примечания: ${item.impurities}</p>
+        <div class="p-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row justify-between gap-2 items-start sm:items-center">
+            <div>
+                <h4 class="font-bold text-slate-900 dark:text-white">${item.name}</h4>
+                <p class="text-slate-400 text-[11px]">📍 ${item.location}</p>
             </div>
-            <div class="flex gap-2 shrink-0 w-full md:w-auto justify-end border-t border-slate-800 pt-2 md:border-t-0 md:pt-0">
-                <button onclick="moderatePointInCabinet(${item.id}, 'suitable')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold transition text-xs cursor-pointer">
-                    💚 Одобрить
-                </button>
-                <button onclick="moderatePointInCabinet(${item.id}, 'unsuitable')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold transition text-xs cursor-pointer">
-                    ❌ Отклонить
-                </button>
+            <div class="flex gap-1.5 self-end sm:self-auto">
+                <button onclick="moderatePointInCabinet(${item.id}, 'suitable')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold text-[11px] cursor-pointer">Одобрить</button>
+                <button onclick="moderatePointInCabinet(${item.id}, 'unsuitable')" class="bg-red-600 text-white px-2.5 py-1 rounded-lg font-semibold text-[11px] cursor-pointer">Отклонить</button>
             </div>
         </div>
     `).join('');
@@ -358,75 +347,35 @@ async function moderatePointInCabinet(id, status) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: parseInt(id), status: status })
         });
-        
         if (response.ok) {
-            alert(`Статус исследования успешно обновлен: ${status === 'suitable' ? 'Подходит' : 'Не подходит'}`);
             await loadPointsFromServer();
             renderModerationQueue();
-        } else {
-            alert("Сервер отклонил операцию модерации.");
         }
-    } catch (err) {
-        console.error("Ошибка при модерации источника:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
-// ФУНКЦИЯ ДЛЯ НАЗНАЧЕНИЯ НОВОГО МОДЕРАТОРА
 async function handleAssignModerator() {
     const usernameInput = document.getElementById("assignUsername");
     const username = usernameInput.value.trim();
     const token = localStorage.getItem("token");
-
-    if (!username) {
-        alert("Пожалуйста, введите логин лаборанта.");
-        return;
-    }
+    if (!username) return;
 
     try {
         const response = await fetch(`${BACKEND_URL}/api/auth/assign-moderator`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ username })
         });
-        const data = await response.json();
-
-        if (response.ok) {
-            alert(`Пользователь ${username} успешно повышен до уровня Модератора/Администратора!`);
-            usernameInput.value = ""; 
-        } else {
-            alert(data.message || "Не удалось назначить модератора.");
-        }
-    } catch (err) {
-        console.error("Ошибка сети при изменении роли:", err);
-        alert("Ошибка связи с бэкенд сервером.");
-    }
+        if (response.ok) { alert("Успешно повышен!"); usernameInput.value = ""; }
+    } catch (err) { console.error(err); }
 }
 
-function logout() {
-    localStorage.removeItem("token");
-    window.location.reload();
-}
-
-// --- УЛУЧШЕННЫЕ И ГАРАНТИРОВАННО РАБОЧИЕ ХЕЛПЕРЫ МОДАЛЬНЫХ ОКОН ---
-function openAddPointModal() { 
-    const modal = document.getElementById("addPointModal");
-    if (modal) modal.classList.remove("hidden"); 
-}
-function closeAddPointModal() { 
-    const modal = document.getElementById("addPointModal");
-    if (modal) modal.classList.add("hidden"); 
-}
-function openAuthModal() { 
-    const modal = document.getElementById("authModal");
-    if (modal) modal.classList.remove("hidden"); 
-}
-function closeAuthModal() { 
-    const modal = document.getElementById("authModal");
-    if (modal) modal.classList.add("hidden"); 
-}
+function logout() { localStorage.removeItem("token"); window.location.reload(); }
+function openAddPointModal() { document.getElementById("addPointModal").classList.remove("hidden"); }
+function closeAddPointModal() { document.getElementById("addPointModal").classList.add("hidden"); }
+// [Остальные хелперы окон openAuthModal, closeAuthModal, toggleToRegister, toggleToLogin остаются без изменений]
+function openAuthModal() { document.getElementById("authModal").classList.remove("hidden"); }
+function closeAuthModal() { document.getElementById("authModal").classList.add("hidden"); }
 function toggleToRegister() {
     document.getElementById("authModalTitle").innerText = "Регистрация";
     document.getElementById("loginFormSubmits").classList.add("hidden");
