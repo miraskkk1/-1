@@ -120,7 +120,6 @@ function renderMapMarkers(items) {
 function selectSource(id) {
     currentSelectedId = id;
     
-    // Перерендер списка для обновления активного бордера
     const query = document.getElementById("searchQuery").value.toLowerCase();
     const filterStatus = document.getElementById("filterStatus").value;
     const filterType = document.getElementById("filterType").value;
@@ -137,40 +136,41 @@ function selectSource(id) {
     const container = document.getElementById("detailsCard");
     
     if (container && wrapper) {
-        let statusText = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg border border-emerald-200 dark:border-emerald-900/30 text-[11px]">💚 Подходит</span>' : 
-                         item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-900/30 text-[11px]">💛 На проверке</span>' : 
-                                                      '<span class="text-rose-600 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-950/40 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/30 text-[11px]">❌ Не подходит</span>';
+        let statusText = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px]">💚 Подходит</span>' : 
+                         item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 text-[10px]">💛 Анализ</span>' : 
+                                                      '<span class="text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md border border-rose-200 text-[10px]">❌ Отклонен</span>';
 
+        // Адаптивная структура: на мобильных — ультра-компактно, на ПК — развернуто
         container.innerHTML = `
-            <div class="pr-6">
-                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">${item.type}</span>
-                <h3 class="text-base font-bold text-slate-900 dark:text-white mt-0.5">${item.name}</h3>
-                <p class="text-xs text-slate-500 mt-1">📍 Ориентир: <span class="text-slate-700 dark:text-slate-300">${item.location}</span></p>
-            </div>
-            
-            <div class="mt-3 flex items-center gap-2">
-                ${statusText}
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 mt-4">
-                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Водородный индекс</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">pH ${item.ph}</strong></div>
-                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Минерализация</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">${item.mineralization} мг/л</strong></div>
-                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Проводимость</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">${item.conductivity} мкСм</strong></div>
-                <div class="p-1"><span class="text-slate-400 block text-[10px] uppercase">Общая жёсткость</span> <strong class="text-sm font-medium text-slate-900 dark:text-white">${item.hardness} мг-экв</strong></div>
+            <div class="pr-6 flex items-start justify-between gap-2">
+                <div>
+                    <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">${item.type}</span>
+                    <h3 class="text-sm md:text-base font-bold text-slate-900 dark:text-white leading-tight mt-0.5">${item.name}</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5 truncate max-w-[280px] md:max-w-none">📍 ${item.location}</p>
+                </div>
+                <div class="shrink-0 mt-1">${statusText}</div>
             </div>
 
-            <div class="text-[11px] space-y-1.5 text-slate-600 dark:text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4">
-                <p>🌡️ Температура воды: <span class="text-slate-900 dark:text-white font-medium">${item.temp} °C</span></p>
-                <p>🔬 Примеси / Осадок: <span class="text-slate-900 dark:text-white font-medium">${item.impurities}</span></p>
-                <p>👤 Лаборант: <span class="text-slate-900 dark:text-white font-medium">${item.author} (${item.date || '2026'})</span></p>
+            <div class="mt-2.5 flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar text-[11px] bg-slate-50 dark:bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">🧬 <strong>pH:</strong> ${item.ph}</span>
+                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">💎 <strong>Мин:</strong> ${item.mineralization} мг/л</span>
+                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">⚡ <strong>Жестк:</strong> ${item.hardness}</span>
+                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">🌡️ <strong>t:</strong> ${item.temp}°C</span>
+            </div>
+
+            <div class="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 mt-2.5 flex justify-between items-center">
+                <p class="truncate max-w-[180px]">🔬 Примеси: <span class="text-slate-800 dark:text-slate-200 font-medium">${item.impurities}</span></p>
+                <p class="text-right text-[9px] text-slate-400">Лаборант: ${item.author}</p>
             </div>
         `;
         
-        // Выдвигаем карточку
         wrapper.classList.remove("translate-y-full");
         
-        // Смещаем карту к центру выбранного источника с отступом под панель
-        myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
+        // Умный фокус: на мобилках смещаем карту чуть сильнее вниз (`item.lat - 0.004`), чтобы маркер вставал ровно в свободную верхнюю часть экрана
+        const isMobile = window.innerWidth < 768;
+        const targetLat = isMobile ? item.lat - 0.004 : item.lat; 
+        
+        myMap.setCenter([targetLat, item.lng], 14, { duration: 300 });
     }
 }
 
