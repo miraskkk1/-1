@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>is2506 practice</title>
+    <title>IT-IS2506 Project</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
         #map { position: absolute; top: 0; left: 0; height: 100%; width: 100%; z-index: 1; }
         
-        /* Плавный скроллбар для списков */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
@@ -25,7 +24,7 @@
         <div class="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md shadow-lg rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800/80 pointer-events-auto flex flex-col gap-3">
             <div class="flex items-center justify-between gap-2">
                 <div>
-                    <h1 class="text-sm font-bold tracking-tight text-slate-900 dark:text-white uppercase font-mono">Гидро Карта</h1>
+                    <h1 class="text-sm font-bold tracking-tight text-slate-900 dark:text-white uppercase font-mono">Карта исследований</h1>
                 </div>
                 <div id="authSection" class="flex items-center gap-2">
                     <button onclick="openAuthModal()" class="text-[11px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200 dark:border-slate-800">
@@ -64,129 +63,23 @@
         <button id="adminPanelBtn" onclick="openModeratorModal()" disabled class="text-xs opacity-0 pointer-events-none bg-white dark:bg-slate-950 px-4 py-2.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 shadow-md transition-all">
             Кабинет Модератора
         </button>
-        <button onclick="openAddPointModal()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/10 cursor-pointer">
+        <button onclick="openAddPointModal()" class="hidden md:block text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/10 cursor-pointer">
             Заказать исследование (20 000 ₸)
         </button>
     </div>
 
-    <div id="detailsWrapper" class="absolute bottom-0 left-0 right-0 md:left-auto md:right-4 md:bottom-4 z-10 max-h-[50vh] md:max-h-none md:w-[450px] p-4 md:p-0 pointer-events-none transition-transform duration-300 translate-y-full">
+    <div class="absolute bottom-6 right-4 z-10 md:hidden">
+        <button onclick="openAddPointModal()" class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-xl cursor-pointer transition-transform active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+        </button>
+    </div>
+
+    <div id="detailsWrapper" class="absolute bottom-0 left-0 right-0 md:left-auto md:right-4 md:bottom-4 z-20 max-h-[50vh] md:max-h-none md:w-[450px] p-4 md:p-0 pointer-events-none transition-transform duration-300 translate-y-full">
         <div class="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md shadow-2xl rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800/80 pointer-events-auto relative overflow-y-auto max-h-[45vh] md:max-h-[75vh] custom-scrollbar">
             <button onclick="closeDetailsCard()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer">&times;</button>
             <div id="detailsCard"></div>
-        </div>
-    </div>
-
-    <div id="addPointModal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-            <div class="border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
-                <h3 class="text-base font-bold">Оформление заказа на исследование источника</h3>
-                <p class="text-[11px] text-blue-600 dark:text-blue-400 mt-0.5 uppercase font-semibold">Стоимость проведения полного физико-химического анализа: 20 000 тенге</p>
-            </div>
-            <form onsubmit="handleCreatePoint(event)" class="space-y-4 text-xs">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="block text-slate-500 font-medium">Название источника / Номер скважины</label>
-                        <input type="text" id="addName" required placeholder="Например: Родник «Горный ключ»" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                    </div>
-                    <div class="space-y-1">
-                        <label class="block text-slate-500 font-medium">Тип источника</label>
-                        <select id="addType" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
-                            <option value="Родник">Родник</option>
-                            <option value="Скважина">Скважина</option>
-                            <option value="Минеральный">Минеральный источник</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="space-y-1">
-                    <label class="block text-slate-500 font-medium">Точный ориентир местоположения</label>
-                    <input type="text" id="addLocation" required placeholder="Например: Медеуский район" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <div>
-                        <label class="block text-[10px] text-slate-400 uppercase font-bold">Широта</label>
-                        <input type="number" step="0.0001" id="addLat" required placeholder="43.2389" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-400 uppercase font-bold">Долгота</label>
-                        <input type="number" step="0.0001" id="addLng" required placeholder="76.8897" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-400 uppercase font-bold">Водородный pH</label>
-                        <input type="number" step="0.1" id="addPh" value="7.2" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-400 uppercase font-bold">Темп (°C)</label>
-                        <input type="number" id="addTemp" value="12" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg" />
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-slate-500">Минерализация (мг/л)</label>
-                        <input type="number" id="addMin" value="210" class="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-500">Проводимость (мкСм/см)</label>
-                        <input type="number" id="addCond" value="290" class="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-500">Общая жёсткость</label>
-                        <input type="number" step="0.1" id="addHard" value="3.4" class="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                    </div>
-                </div>
-                <div class="space-y-1">
-                    <label class="block text-slate-500 font-medium">Примечание лаборанта</label>
-                    <input type="text" id="addImpurities" placeholder="Осадок отсутствует..." class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                </div>
-                <div class="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-4">
-                    <button type="button" onclick="closeAddPointModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition cursor-pointer">Отмена</button>
-                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer">Подтвердить</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="authModal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-xs">
-            <h3 id="authModalTitle" class="text-sm font-bold border-b border-slate-200 dark:border-slate-800 pb-2 mb-4">Авторизация лаборанта</h3>
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-slate-500 mb-1">Логин</label>
-                    <input type="text" id="loginUsername" placeholder="Введите логин" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                </div>
-                <div>
-                    <label class="block text-slate-500 mb-1">Пароль</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
-                </div>
-                <div id="loginError" class="text-red-500 text-[11px] hidden bg-red-50 dark:bg-red-950/30 p-2 rounded border border-red-200 dark:border-red-900/30"></div>
-                <div id="loginFormSubmits" class="space-y-2 pt-2">
-                    <button onclick="handleBackendLogin()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition cursor-pointer">Войти</button>
-                    <p class="text-center text-slate-400">Впервые в системе? <span onclick="toggleToRegister()" class="text-blue-500 underline cursor-pointer">Создать аккаунт</span></p>
-                </div>
-                <div id="registerFormSubmits" class="space-y-2 pt-2 hidden">
-                    <button onclick="handleBackendRegister()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition cursor-pointer">Зарегистрироваться</button>
-                    <p class="text-center text-slate-400">Уже есть аккаунт? <span onclick="toggleToLogin()" class="text-blue-500 underline cursor-pointer">Войти</span></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="moderatorModal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-            <h2 class="text-base font-bold border-b border-slate-200 dark:border-slate-800 pb-2 mb-4">Панель верификации модератора</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 h-fit">
-                    <h4 class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Назначить модератора</h4>
-                    <input type="text" id="assignUsername" placeholder="Логин лаборанта" class="w-full p-2 text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-lg" />
-                    <button onclick="handleAssignModerator()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold text-xs transition cursor-pointer">Выдать права</button>
-                </div>
-                <div class="lg:col-span-2 space-y-3">
-                    <h4 class="text-xs font-bold text-slate-400 uppercase px-1">Очередь проверки нового анализа</h4>
-                    <div id="moderationQueueList" class="space-y-3 text-xs"></div>
-                </div>
-            </div>
-            <div class="mt-6 pt-3 border-t border-slate-200 dark:border-slate-800 text-right">
-                <button onclick="closeModeratorModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-semibold cursor-pointer">Закрыть</button>
-            </div>
         </div>
     </div>
 
