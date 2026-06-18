@@ -311,28 +311,49 @@ function handleAuthSuccess(data) {
     renderApp();
 }
 
-function openModeratorModal() { document.getElementById("moderatorModal").classList.remove("hidden"); renderModerationQueue(); }
-function closeModeratorModal() { document.getElementById("moderatorModal").classList.add("hidden"); }
+function openModeratorModal() { 
+    const modal = document.getElementById("moderatorModal");
+    if (modal) {
+        modal.classList.remove("hidden"); 
+        renderModerationQueue(); 
+    }
+}
+
+function closeModeratorModal() { 
+    const modal = document.getElementById("moderatorModal");
+    if (modal) modal.classList.add("hidden"); 
+}
 
 function renderModerationQueue() {
     const queueContainer = document.getElementById("moderationQueueList");
     if (!queueContainer) return;
-    const checkingPoints = loadedSources.filter(item => item.status === "checking");
+    
+    // Безопасная фильтрация: ищем элементы на анализе
+    const checkingPoints = loadedSources.filter(item => item && item.status === "checking");
 
     if (checkingPoints.length === 0) {
-        queueContainer.innerHTML = '<div class="text-center py-6 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">Очередь пуста</div>';
+        queueContainer.innerHTML = `
+            <div class="text-center py-8 text-slate-400 border border-dashed border-slate-800 rounded-xl bg-slate-950/50">
+                📥 Очередь пуста. Нет источников на проверку.
+            </div>
+        `;
         return;
     }
 
     queueContainer.innerHTML = checkingPoints.map(item => `
-        <div class="p-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row justify-between gap-2 items-start sm:items-center">
-            <div>
-                <h4 class="font-bold text-slate-900 dark:text-white">${item.name}</h4>
-                <p class="text-slate-400 text-[11px]">📍 ${item.location}</p>
+        <div class="p-3.5 border border-slate-800 rounded-xl bg-slate-900/60 flex flex-col sm:flex-row justify-between gap-3 items-start sm:items-center">
+            <div class="truncate max-w-full sm:max-w-[70%]">
+                <h4 class="font-bold text-white font-mono text-sm truncate">${item.name || 'Без названия'}</h4>
+                <p class="text-slate-400 text-[11px] mt-0.5 truncate">📍 Ориентир: ${item.location || 'Не указан'}</p>
+                <p class="text-slate-500 text-[10px] mt-1 font-mono">Тип: ${item.type || 'Родник'} | pH: ${item.ph || 7} | Создал: ${item.author || 'Лаборант'}</p>
             </div>
-            <div class="flex gap-1.5 self-end sm:self-auto">
-                <button onclick="moderatePointInCabinet(${item.id}, 'suitable')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold text-[11px] cursor-pointer">Одобрить</button>
-                <button onclick="moderatePointInCabinet(${item.id}, 'unsuitable')" class="bg-red-600 text-white px-2.5 py-1 rounded-lg font-semibold text-[11px] cursor-pointer">Отклонить</button>
+            <div class="flex gap-2 w-full sm:w-auto shrink-0 justify-end">
+                <button onclick="moderatePointInCabinet(${item.id}, 'suitable')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-all active:scale-95">
+                    Одобрить
+                </button>
+                <button onclick="moderatePointInCabinet(${item.id}, 'unsuitable')" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-all active:scale-95">
+                    Отклонить
+                </button>
             </div>
         </div>
     `).join('');
@@ -345,27 +366,18 @@ async function moderatePointInCabinet(id, status) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: parseInt(id), status: status })
         });
+        
         if (response.ok) {
+            // Перезагружаем данные с сервера и обновляем списки
             await loadPointsFromServer();
             renderModerationQueue();
+        } else {
+            alert("Не удалось изменить статус точки на бэкенде.");
         }
-    } catch (err) { console.error(err); }
-}
-
-async function handleAssignModerator() {
-    const usernameInput = document.getElementById("assignUsername");
-    const username = usernameInput.value.trim();
-    const token = localStorage.getItem("token");
-    if (!username) return;
-
-    try {
-        const response = await fetch(`${BACKEND_URL}/api/auth/assign-moderator`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ username })
-        });
-        if (response.ok) { alert("Успешно повышен!"); usernameInput.value = ""; }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+        console.error("Ошибка модерации:", err); 
+        alert("Ошибка соединения с сервером.");
+    }
 }
 
 function logout() { localStorage.removeItem("token"); window.location.reload(); }
