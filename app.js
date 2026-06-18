@@ -1,4 +1,4 @@
-const BACKEND_URL = "https://1-1-5hl5.onrender.com";
+xconst BACKEND_URL = "https://1-1-5hl5.onrender.com";
 
 let myMap;
 let currentSelectedId = null;
@@ -118,50 +118,61 @@ function renderMapMarkers(items) {
         geoObjectsCollection.add(placemark);
     });
 }
-
+// Выбор источника и отображение карточки расширенных лабораторных данных
 function selectSource(id) {
     currentSelectedId = id;
+    renderApp(); 
     
     const item = loadedSources.find(p => p.id === id);
     if (!item) return;
 
-    const wrapper = document.getElementById("detailsWrapper");
-    const container = document.getElementById("detailsCard");
+    const detailsCard = document.getElementById("detailsCard");
+    const placeholder = document.getElementById("noSelectPlaceholder");
     
-    if (container && wrapper) {
-        let statusText = item.status === 'suitable' ? '<span class="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px]">💚 Подходит</span>' : 
-                         item.status === 'checking' ? '<span class="text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 text-[10px]">💛 Анализ</span>' : 
-                                                      '<span class="text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md border border-rose-200 text-[10px]">❌ Отклонен</span>';
+    if (placeholder) placeholder.classList.add("hidden");
+    if (detailsCard) {
+        detailsCard.classList.remove("hidden");
+        
+        let statusText = item.status === 'suitable' ? '<span class="text-emerald-400 font-bold font-mono bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/30 text-[11px] tracking-wide uppercase">💚 Подходит</span>' : 
+                         item.status === 'checking' ? '<span class="text-amber-400 font-bold font-mono bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30 text-[11px] tracking-wide uppercase">💛 Анализ</span>' : 
+                                                      '<span class="text-rose-400 font-bold font-mono bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/30 text-[11px] tracking-wide uppercase">❌ Отклонен</span>';
 
-        // Ультра-компактная карточка, сохраняющая обзор карты на мобильных
-        container.innerHTML = `
-            <div class="pr-6 flex items-start justify-between gap-2">
+        detailsCard.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-slate-800 pb-4 gap-3">
                 <div>
-                    <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">${item.type}</span>
-                    <h3 class="text-sm md:text-base font-bold text-slate-900 dark:text-white leading-tight mt-0.5">${item.name}</h3>
-                    <p class="text-[11px] text-slate-500 mt-0.5 truncate max-w-[240px] md:max-w-none">📍 ${item.location}</p>
+                    <h3 class="text-lg font-bold text-white font-mono tracking-wide">${item.name}</h3>
+                    <p class="text-xs text-slate-400 mt-1">📍 Ориентир: <span class="text-slate-300">${item.location}</span></p>
                 </div>
-                <div class="shrink-0 mt-1">${statusText}</div>
+                <div class="shrink-0">${statusText}</div>
             </div>
-
-            <div class="mt-2.5 flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar text-[11px] bg-slate-50 dark:bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
-                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">🧬 <strong>pH:</strong> ${item.ph}</span>
-                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">💎 <strong>Мин:</strong> ${item.mineralization} мг/л</span>
-                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">⚡ <strong>Жестк:</strong> ${item.hardness}</span>
-                <span class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded-md border border-slate-200/50 shrink-0">🌡️ <strong>t:</strong> ${item.temp}°C</span>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mt-3">
+                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+                    <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Водородный pH</span> 
+                    <strong class="text-sm font-mono text-amber-400 block">pH ${item.ph}</strong>
+                </div>
+                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+                    <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Минерализация</span> 
+                    <strong class="text-sm font-mono text-white block">${item.mineralization} <span class="text-[10px] text-slate-400 font-normal">мг/л</span></strong>
+                </div>
+                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+                    <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Проводимость</span> 
+                    <strong class="text-sm font-mono text-white block">${item.conductivity} <span class="text-[10px] text-slate-400 font-normal">мкСм</span></strong>
+                </div>
+                <div class="space-y-1 bg-slate-900/50 p-2 rounded-lg border border-slate-800/40">
+                    <span class="text-slate-400 block text-[9px] uppercase tracking-wider font-mono">Общая жёсткость</span> 
+                    <strong class="text-sm font-mono text-white block">${item.hardness} <span class="text-[10px] text-slate-400 font-normal">мг-экв</span></strong>
+                </div>
             </div>
-
-            <div class="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 mt-2.5 flex justify-between items-center">
-                <p class="truncate max-w-[180px]">🔬 Осадок: <span class="text-slate-800 dark:text-slate-200 font-medium">${item.impurities}</span></p>
-                <p class="text-right text-[9px] text-slate-400">Лаборант: ${item.author}</p>
+            
+            <div class="text-xs space-y-2 text-slate-300 pt-3 font-mono">
+                <p><span class="text-slate-500">Температура воды:</span> <span class="text-white font-medium">${item.temp} °C</span></p>
+                <p><span class="text-slate-500">Примеси / Осадок:</span> <span class="text-white font-medium">${item.impurities}</span></p>
+                <p><span class="text-slate-500">Лаборант:</span> <span class="text-amber-400 font-medium">${item.author}</span> <span class="text-[10px] text-slate-500">(${item.date || '2026'})</span></p>
             </div>
         `;
         
-        wrapper.classList.remove("translate-y-full");
-        
-        const isMobile = window.innerWidth < 768;
-        const targetLat = isMobile ? item.lat - 0.003 : item.lat; 
-        myMap.setCenter([targetLat, item.lng], 14, { duration: 300 });
+        myMap.setCenter([item.lat, item.lng], 14, { duration: 300 });
     }
 }
 
