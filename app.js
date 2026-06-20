@@ -13,8 +13,17 @@ async function initYandexMap() {
     myMap = new ymaps.Map("map", {
         center: [43.2389, 76.8897],
         zoom: 11,
-        controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
+        // Оставляем только нужные контролы, карту масштабируем под контейнер
+        controls: ['zoomControl', 'typeSelector']
     });
+    
+    // Автоматический пересчёт размеров карты при изменении окна
+    myMap.container.fitToViewport();
+
+    geoObjectsCollection = new ymaps.GeoObjectCollection();
+    myMap.geoObjects.add(geoObjectsCollection);
+    
+    // ... остальной ваш код без изменений ...
 
     geoObjectsCollection = new ymaps.GeoObjectCollection();
     myMap.geoObjects.add(geoObjectsCollection);
