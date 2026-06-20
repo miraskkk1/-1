@@ -39,71 +39,98 @@ app.post('/api/sources/sync', (req, res) => {
         waterSourcesDatabase = req.body;
         return res.json({ success: true, message: "База данных успешно инициализирована", count: waterSourcesDatabase.length });
     }
-    res.json({ success: true, message: "Синхронизация не требуется", count: waterSourcesDatabase.length });
+    res.json({ success: true, message: "Синхронизация не требуется или неверный формат данных" });
 });
 
-// Добавление новой точки (заявка)
+// Добавление новой точки (заказ на анализ)
 app.post('/api/sources', (req, res) => {
     const { name, type, district, location, lat, lng, ph, mineralization, conductivity, hardness, temp, impurities, author } = req.body;
     
     const newPoint = {
-        id: waterSourcesDatabase.length + 1,
-        name, type, region: "Алматы", district, location,
-        lat: parseFloat(lat) || 0, 
-        lng: parseFloat(lng) || 0,
-        status: "checking", 
-        labChecked: false,
-        ph: parseFloat(ph) || 7.0, 
-        mineralization: parseInt(mineralization) || 200, 
-        conductivity: parseInt(conductivity) || 300, 
-        hardness: parseFloat(hardness) || 3.0, 
-        temp: parseInt(temp) || 10, 
-        impurities: impurities || "Отсутствуют",
-        author: author || "Анонимный исследователь",
+        id: waterSourcesDatabase.length > 0 ? Math.max(...waterSourcesDatabase.map(p => p.id)) + 1 : 1,
+        name,
+        type,
+        district,
+        location,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        status: "checking", // Все новые падают на проверку
+        ph: parseFloat(ph) || 7.0,
+        mineralization: parseInt(mineralization) || 0,
+        conductivity: parseInt(conductivity) || 0,
+        hardness: parseFloat(hardness) || 0,
+        temp: parseInt(temp) || 0,
+        impurities: impurities || "Нет",
+        author: author || "Аноним",
         date: new Date().toISOString().split('T')[0]
     };
 
     waterSourcesDatabase.push(newPoint);
-    res.json({ success: true, point: newPoint });
+    res.status(201).json({ success: true, message: "Точка успешно создана и отправлена на модерацию", data: newPoint });
 });
 
-// Модерация (Одобрить/Отклонить)
+// Изменение статуса модератором (Одобрить/Отклонить)
 app.post('/api/sources/moderate', (req, res) => {
     const { id, status } = req.body;
     const point = waterSourcesDatabase.find(p => p.id === parseInt(id));
     
-    if (point) {
-        point.status = status; 
-        point.labChecked = true;
-        return res.json({ success: true, message: `Статус точки ID ${id} изменено на ${status}` });
+    if (!point) {
+        return res.status(404).json({ success: false, message: "Точка не найдена" });
     }
-    res.status(404).json({ success: false, message: "Точка не найдена" });
+
+    point.status = status; // 'suitable' или 'unsuitable'
+    res.json({ success: true, message: `Статус точки успешно изменен на ${status}`, data: point });
 });
 
-// Повышение прав до модератора (Исправлен роут под фронтенд)
+// ФИЧА: Редактирование параметров источника модератором
+app.post('/api/sources/update', (req, res) => {
+    const { id, name, location, ph, mineralization, conductivity, hardness, temp, impurities } = req.body;
+    
+    const sourceIndex = waterSourcesDatabase.findIndex(item => item.id === parseInt(id));
+    
+    if (sourceIndex === -1) {
+        return res.status(404).json({ success: false, message: "Источник не найден" });
+    }
+
+    waterSourcesDatabase[sourceIndex] = {
+        ...waterSourcesDatabase[sourceIndex],
+        name: name || waterSourcesDatabase[sourceIndex].name,
+        location: location || waterSourcesDatabase[sourceIndex].location,
+        ph: parseFloat(ph) !== undefined ? parseFloat(ph) : waterSourcesDatabase[sourceIndex].ph,
+        mineralization: parseInt(mineralization) !== undefined ? parseInt(mineralization) : waterSourcesDatabase[sourceIndex].mineralization,
+        conductivity: parseInt(conductivity) !== undefined ? parseInt(conductivity) : waterSourcesDatabase[sourceIndex].conductivity,
+        hardness: parseFloat(hardness) !== undefined ? parseFloat(hardness) : waterSourcesDatabase[sourceIndex].hardness,
+        temp: parseInt(temp) !== undefined ? parseInt(temp) : waterSourcesDatabase[sourceIndex].temp,
+        impurities: impurities || waterSourcesDatabase[sourceIndex].impurities
+    };
+
+    res.json({ success: true, message: "Данные источника успешно обновлены!", data: waterSourcesDatabase[sourceIndex] });
+});
+
+// Назначение модератора
 app.post('/api/auth/assign-moderator', (req, res) => {
     const { username } = req.body;
-    const user = usersDatabase[username?.toLowerCase().trim()];
+    const cleanUsername = username.toLowerCase().trim();
 
-    if (user) {
-        user.role = "moderator";
-        if (user.profile) {
-            user.profile["Доступ"] = "Модератор системы";
-        }
-        return res.json({ success: true, message: `Пользователь ${username} успешно повышен до Модератора!` });
+    if (!usersDatabase[cleanUsername]) {
+        return res.status(404).json({ success: false, message: "Пользователь с таким логином не найден в системе." });
     }
-    res.status(404).json({ success: false, message: "Пользователь не зарегистрирован" });
+
+    usersDatabase[cleanUsername].role = "moderator";
+    res.json({ success: true, message: `Пользователю ${username} успешно выданы права модератора.` });
 });
 
 // Авторизация
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
-    const user = usersDatabase[username?.toLowerCase().trim()];
-    
+    const cleanUsername = username.toLowerCase().trim();
+
+    const user = usersDatabase[cleanUsername];
     if (user && user.password === password) {
-        const token = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '6h' });
         return res.json({ success: true, token, role: user.role, profile: user.profile });
     }
+
     res.status(401).json({ success: false, message: "Неверный логин или пароль" });
 });
 
@@ -121,7 +148,7 @@ app.post('/api/auth/register', (req, res) => {
         password: password,
         role: "student",
         profile: {
-            "ФИО": cleanUsername,
+            "ФИО": username,
             "Статус": "Исследователь (Студент)",
             "Доступ": "Базовый уровень"
         }
@@ -129,7 +156,6 @@ app.post('/api/auth/register', (req, res) => {
 
     res.json({ success: true, message: "Регистрация прошла успешно!" });
 });
-
 
 // Проверка сессии
 app.get('/api/auth/me', (req, res) => {
@@ -149,31 +175,7 @@ app.get('/api/auth/me', (req, res) => {
         }
     });
 });
-// Редактирование параметров источника модератором
-app.post('/api/sources/update', (req, res) => {
-    const { id, name, location, ph, mineralization, conductivity, hardness, temp, impurities } = req.body;
-    
-    const sourceIndex = waterSourcesDatabase.findIndex(item => item.id === parseInt(id));
-    
-    if (sourceIndex === -1) {
-        return res.status(404).json({ success: false, message: "Источник не найден" });
-    }
 
-    // Обновляем поля, сохраняя старые, если новые не переданы
-    waterSourcesDatabase[sourceIndex] = {
-        ...waterSourcesDatabase[sourceIndex],
-        name: name || waterSourcesDatabase[sourceIndex].name,
-        location: location || waterSourcesDatabase[sourceIndex].location,
-        ph: parseFloat(ph) || waterSourcesDatabase[sourceIndex].ph,
-        mineralization: parseInt(mineralization) || waterSourcesDatabase[sourceIndex].mineralization,
-        conductivity: parseInt(conductivity) || waterSourcesDatabase[sourceIndex].conductivity,
-        hardness: parseFloat(hardness) || waterSourcesDatabase[sourceIndex].hardness,
-        temp: parseInt(temp) || waterSourcesDatabase[sourceIndex].temp,
-        impurities: impurities || waterSourcesDatabase[sourceIndex].impurities
-    };
-
-    res.json({ success: true, message: "Данные источника успешно обновлены!", data: waterSourcesDatabase[sourceIndex] });
-});
 app.listen(PORT, () => {
     console.log(`Сервер запущен на порту ${PORT}`);
 });
