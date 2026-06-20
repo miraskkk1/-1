@@ -7,16 +7,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <style>
-        /* Карта на абсолютно весь экран */
-        #map { position: absolute; top: 0; left: 0; height: 100%; width: 100%; z-index: 0; }
-        /* Кастомный скроллбар для боковой панели */
+        /* Жестко фиксируем карту на весь экран сзади */
+        #map { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            z-index: 0; 
+        }
+        /* Кастомный скроллбар для левой панели */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(2, 6, 23, 0.4); }
+        ::-webkit-scrollbar-track { background: rgba(2, 6, 23, 0.3); }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans h-screen w-screen overflow-hidden flex flex-col relative">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen w-screen overflow-hidden m-0 p-0 relative">
 
     <div id="map"></div>
 
@@ -46,11 +53,11 @@
         </div>
     </header>
 
-    <main class="relative z-10 flex-1 container mx-auto p-4 flex flex-col justify-between pointer-events-none h-[calc(100vh-80px)] overflow-hidden">
+    <main class="absolute inset-x-0 bottom-0 top-[73px] z-10 pointer-events-none p-4 flex flex-col justify-between h-[calc(100vh-73px)] overflow-hidden">
         
         <div class="flex flex-1 gap-6 items-start h-full overflow-hidden">
             <section class="w-full max-w-sm flex flex-col gap-4 h-full pb-4 pointer-events-auto">
-                <div class="bg-slate-900/85 backdrop-blur border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-2xl shrink-0">
+                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-2xl shrink-0">
                     <div class="relative">
                         <input type="text" id="searchQuery" placeholder="Поиск по названию или ориентиру..." class="w-full pl-3 pr-10 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-xs focus:outline-none focus:border-blue-500 text-white font-mono placeholder-slate-500" />
                     </div>
@@ -70,7 +77,7 @@
                     </div>
                 </div>
 
-                <div id="sourcesList" class="flex-1 overflow-y-auto space-y-2 pr-1 pb-2">
+                <div id="sourcesList" class="flex-1 overflow-y-auto space-y-2 pr-1 pb-4">
                     </div>
             </section>
 
@@ -78,7 +85,7 @@
         </div>
 
         <div class="w-full max-w-4xl mx-auto mb-4 pointer-events-auto">
-            <div id="detailsCard" class="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl p-4 hidden shadow-2xl relative">
+            <div id="detailsCard" class="bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl p-4 hidden shadow-2xl relative">
                 <button onclick="closeDetailsCard()" class="absolute top-3 right-3 text-slate-400 hover:text-white text-base cursor-pointer">&times;</button>
                 <div id="detailsContent"></div>
             </div>
@@ -127,5 +134,141 @@
                     </div>
                     <div>
                         <label class="block text-[10px] text-slate-500 uppercase font-bold">Водородный pH</label>
-                        <input type="number" step="0.1" id="addPh" value="
-                            
+                        <input type="number" step="0.1" id="addPh" value="7.2" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 uppercase font-bold">Темп (°C)</label>
+                        <input type="number" id="addTemp" value="12" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-white" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Минерализация (мг/л)</label>
+                        <input type="number" id="addMin" value="210" class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Проводимость (мкСм/см)</label>
+                        <input type="number" id="addCond" value="290" class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Общая жёсткость</label>
+                        <input type="number" step="0.1" id="addHard" value="3.4" class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-slate-400">Примечание по примесям / осадку</label>
+                    <input type="text" id="addImpurities" placeholder="Например: Осадок отсутствует, вода прозрачная" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                </div>
+
+                <div class="flex justify-end gap-2 border-t border-slate-800 pt-4">
+                    <button type="button" onclick="closeAddPointModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition cursor-pointer">Отмена</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer shadow-md shadow-blue-600/20">Добавить источник</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="authModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 text-slate-100 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-xs font-mono">
+            <h3 id="authModalTitle" class="text-sm font-bold border-b border-slate-800 pb-2 mb-4 text-white">Авторизация</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-slate-400 mb-1">Логин</label>
+                    <input type="text" id="loginUsername" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" />
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Пароль</label>
+                    <input type="password" id="loginPassword" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" />
+                </div>
+                
+                <div id="loginError" class="text-red-400 text-[11px] hidden bg-red-950/40 p-2.5 rounded-xl border border-red-900/50"></div>
+                
+                <div id="loginFormSubmits" class="space-y-2 pt-2">
+                    <button onclick="handleBackendLogin()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer shadow-lg shadow-blue-600/10">Войти</button>
+                    <p class="text-center text-slate-500 text-[10px]">Впервые в системе? <span onclick="toggleToRegister()" class="text-blue-400 underline cursor-pointer hover:text-blue-300">Создать аккаунт</span></p>
+                </div>
+                <div id="registerFormSubmits" class="space-y-2 pt-2 hidden">
+                    <button onclick="handleBackendRegister()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition cursor-pointer shadow-lg shadow-emerald-600/10">Зарегистрироваться</button>
+                    <p class="text-center text-slate-500 text-[10px]">Уже есть аккаунт? <span onclick="toggleToLogin()" class="text-blue-400 underline cursor-pointer hover:text-blue-300">Войти в кабинет</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="moderatorModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 text-slate-100 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+            <h2 class="text-sm font-bold font-mono text-white tracking-wider border-b border-slate-800 pb-3 mb-4 uppercase">Панель управления модератора гидроресурсов</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-slate-950/50 p-4 border border-slate-800 rounded-xl space-y-3 h-fit">
+                    <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">🔒 Управление доступом</h4>
+                    <p class="text-[11px] text-slate-400">Введите точный логин учетной записи, чтобы повысить лаборанта до уровня проверки.</p>
+                    <div class="space-y-2">
+                        <input type="text" id="assignUsername" placeholder="Логин (например: student1)" class="w-full p-2 text-xs border border-slate-800 bg-slate-900 rounded-lg text-white focus:outline-none focus:border-indigo-500 font-mono" />
+                        <button onclick="handleAssignModerator()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold text-xs transition cursor-pointer">
+                            Выдать права доступа
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-3 flex flex-col">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">📥 Очередь проверки (Новые заказы на анализ)</h4>
+                    <div id="moderationQueueList" class="space-y-3 text-xs"></div>
+
+                    <div id="moderatorEditBlock" class="mt-4 p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3 hidden transition-all duration-300">
+                        <h5 class="text-xs font-bold text-amber-400 uppercase tracking-wider">🛠️ Корректировка физико-химических показателей</h5>
+                        <form id="moderatorEditForm" onsubmit="submitUpdatedSource(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] font-mono text-slate-300">
+                            <input type="hidden" id="editId" />
+                            <div>
+                                <label class="block text-slate-500 mb-1">Название источника</label>
+                                <input type="text" id="editName" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" required />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Ориентир положения</label>
+                                <input type="text" id="editLocation" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" required />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Водородный pH</label>
+                                <input type="number" step="0.1" id="editPh" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Минерализация (мг/л)</label>
+                                <input type="number" id="editMin" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Проводимость (мкСм)</label>
+                                <input type="number" id="editCond" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Жёсткость (мг-экв)</label>
+                                <input type="number" step="0.1" id="editHard" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Температура (°C)</label>
+                                <input type="number" id="editTemp" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">Примеси / Осадок</label>
+                                <input type="text" id="editImpurities" class="w-full p-2 border border-slate-800 bg-slate-900 rounded-lg text-white" />
+                            </div>
+                            <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
+                                <button type="button" onclick="document.getElementById('moderatorEditBlock').classList.add('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Отмена</button>
+                                <button type="submit" class="px-5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-md shadow-amber-600/10">Сохранить параметры</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-3 border-t border-slate-800 text-right">
+                <button onclick="closeModeratorModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-semibold text-slate-300 transition cursor-pointer">Закрыть панель</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
