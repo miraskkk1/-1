@@ -8,13 +8,14 @@
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <style>
         #map { height: 500px; width: 100%; border-radius: 0.75rem; }
+        /* Кастомный скроллбар для боковой панели */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
     </style>
 </head>
-<body class="bg-slate-955 text-slate-100 font-sans min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col">
 
     <header class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 text-white shadow-xl border-b border-slate-800/60 p-4">
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
@@ -28,7 +29,7 @@
             
             <div class="flex items-center gap-3 w-full md:w-auto justify-end" id="topActionRow">
                 <button onclick="openAddPointModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-lg shadow-blue-600/10 active:scale-95">
-                    + Заказать анализ
+                    + Добавить точку
                 </button>
                 <div id="authSection">
                     <button onclick="openAuthModal()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition-all border border-slate-800 cursor-pointer">
@@ -57,7 +58,7 @@
                     </select>
                     <select id="filterType" class="p-2 bg-slate-950 border border-slate-800 rounded-xl text-[11px] text-slate-300 focus:outline-none focus:border-blue-500 font-mono">
                         <option value="all">Все типы</option>
-                        <option value="Родник font-sans">Родник</option>
+                        <option value="Родник">Родник</option>
                         <option value="Скважина">Скважина</option>
                         <option value="Минеральный">Минеральный</option>
                     </select>
@@ -84,7 +85,7 @@
         <div class="bg-slate-900 border border-slate-800 text-slate-100 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
             <div class="border-b border-slate-800 pb-3 mb-4 flex justify-between items-center">
                 <div>
-                    <h3 class="text-sm font-bold font-mono tracking-wide text-white">Оформление нового исследования воды</h3>
+                    <h3 class="text-sm font-bold font-mono tracking-wide text-white">Внесение нового источника воды</h3>
                     <p id="coordinateHelperText" class="text-[11px] text-indigo-400 mt-0.5 uppercase font-semibold">💡 Кликните в любое место на карте, чтобы заполнить координаты автоматически!</p>
                 </div>
                 <button onclick="closeAddPointModal()" class="text-slate-400 hover:text-white font-bold">&times;</button>
@@ -152,7 +153,7 @@
 
                 <div class="flex justify-end gap-2 border-t border-slate-800 pt-4">
                     <button type="button" onclick="closeAddPointModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition cursor-pointer">Отмена</button>
-                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer shadow-md shadow-blue-600/20">Подтвердить и оплатить заказ</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer shadow-md shadow-blue-600/20">Добавить источник</button>
                 </div>
             </form>
         </div>
@@ -160,10 +161,10 @@
 
     <div id="authModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
         <div class="bg-slate-900 border border-slate-800 text-slate-100 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-xs font-mono">
-            <h3 id="authModalTitle" class="text-sm font-bold border-b border-slate-800 pb-2 mb-4 text-white">Авторизация в системе</h3>
+            <h3 id="authModalTitle" class="text-sm font-bold border-b border-slate-800 pb-2 mb-4 text-white">Авторизация</h3>
             <div class="space-y-3">
                 <div>
-                    <label class="block text-slate-400 mb-1">Логин учетной записи</label>
+                    <label class="block text-slate-400 mb-1">Логин</label>
                     <input type="text" id="loginUsername" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" />
                 </div>
                 <div>
@@ -174,7 +175,7 @@
                 <div id="loginError" class="text-red-400 text-[11px] hidden bg-red-950/40 p-2.5 rounded-xl border border-red-900/50"></div>
                 
                 <div id="loginFormSubmits" class="space-y-2 pt-2">
-                    <button onclick="handleBackendLogin()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer shadow-lg shadow-blue-600/10">Выполнить вход</button>
+                    <button onclick="handleBackendLogin()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer shadow-lg shadow-blue-600/10">Войти</button>
                     <p class="text-center text-slate-500 text-[10px]">Впервые в системе? <span onclick="toggleToRegister()" class="text-blue-400 underline cursor-pointer hover:text-blue-300">Создать аккаунт</span></p>
                 </div>
                 <div id="registerFormSubmits" class="space-y-2 pt-2 hidden">
@@ -192,18 +193,18 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="bg-slate-950/50 p-4 border border-slate-800 rounded-xl space-y-3 h-fit">
                     <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">🔒 Управление доступом</h4>
-                    <p class="text-[11px] text-slate-400 font-mono">Введите логин лаборанта, чтобы повысить его до уровня проверки.</p>
-                    <div class="space-y-2 font-mono">
-                        <input type="text" id="assignUsername" placeholder="Логин (например: student1)" class="w-full p-2.5 text-xs border border-slate-800 bg-slate-950 rounded-xl text-white focus:outline-none focus:border-indigo-500" />
-                        <button onclick="handleAssignModerator()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl font-bold text-xs transition cursor-pointer shadow-md shadow-indigo-600/10">
-                            Выдать права модератора
+                    <p class="text-[11px] text-slate-400">Введите точный логин учетной записи, чтобы повысить лаборанта до уровня проверки.</p>
+                    <div class="space-y-2">
+                        <input type="text" id="assignUsername" placeholder="Логин (например: student1)" class="w-full p-2 text-xs border border-slate-800 bg-slate-900 rounded-lg text-white focus:outline-none focus:border-indigo-500 font-mono" />
+                        <button onclick="handleAssignModerator()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold text-xs transition cursor-pointer">
+                            Выдать права доступа
                         </button>
                     </div>
                 </div>
 
                 <div class="lg:col-span-2 space-y-3 flex flex-col">
                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">📥 Очередь проверки (Новые заказы на анализ)</h4>
-                    <div id="moderationQueueList" class="space-y-3 text-xs font-mono">
+                    <div id="moderationQueueList" class="space-y-3 text-xs">
                         </div>
 
                     <div id="moderatorEditBlock" class="mt-4 p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3 hidden transition-all duration-300">
