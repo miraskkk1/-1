@@ -42,7 +42,7 @@ app.post('/api/sources/sync', (req, res) => {
     res.json({ success: true, message: "Синхронизация не требуется или неверный формат данных" });
 });
 
-// Добавление новой точки (заказ на анализ)
+// Добавление новой точки
 app.post('/api/sources', (req, res) => {
     const { name, type, district, location, lat, lng, ph, mineralization, conductivity, hardness, temp, impurities, author } = req.body;
     
@@ -54,7 +54,7 @@ app.post('/api/sources', (req, res) => {
         location,
         lat: parseFloat(lat),
         lng: parseFloat(lng),
-        status: "checking", // Все новые падают на проверку
+        status: "checking", 
         ph: parseFloat(ph) || 7.0,
         mineralization: parseInt(mineralization) || 0,
         conductivity: parseInt(conductivity) || 0,
@@ -69,7 +69,7 @@ app.post('/api/sources', (req, res) => {
     res.status(201).json({ success: true, message: "Точка успешно создана и отправлена на модерацию", data: newPoint });
 });
 
-// Изменение статуса модератором (Одобрить/Отклонить)
+// Изменение статуса модератором
 app.post('/api/sources/moderate', (req, res) => {
     const { id, status } = req.body;
     const point = waterSourcesDatabase.find(p => p.id === parseInt(id));
@@ -78,11 +78,11 @@ app.post('/api/sources/moderate', (req, res) => {
         return res.status(404).json({ success: false, message: "Точка не найдена" });
     }
 
-    point.status = status; // 'suitable' или 'unsuitable'
+    point.status = status; 
     res.json({ success: true, message: `Статус точки успешно изменен на ${status}`, data: point });
 });
 
-// ФИЧА: Редактирование параметров источника модератором
+// ФИЧА: Обновление параметров источника модератором
 app.post('/api/sources/update', (req, res) => {
     const { id, name, location, ph, mineralization, conductivity, hardness, temp, impurities } = req.body;
     
