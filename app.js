@@ -10,56 +10,52 @@ let currentUserProfile = null;
 ymaps.ready(initYandexMap);
 
 async function initYandexMap() {
-    try {
-        myMap = new ymaps.Map("map", {
-            center: [43.2389, 76.8897],
-            zoom: 11,
-            controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
-        });
+    myMap = new ymaps.Map("map", {
+        center: [43.2389, 76.8897],
+        zoom: 11,
+        controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
+    });
 
-        geoObjectsCollection = new ymaps.GeoObjectCollection();
-        myMap.geoObjects.add(geoObjectsCollection);
+    geoObjectsCollection = new ymaps.GeoObjectCollection();
+    myMap.geoObjects.add(geoObjectsCollection);
 
-        // ФИЧА 1: Автоопределение координат кликом по карте
-        myMap.events.add('click', function (e) {
-            const coords = e.get('coords'); 
-            const latField = document.getElementById("addLat");
-            const lngField = document.getElementById("addLng");
+    // ФИЧА 1: Клик по карте заполняет поля координат формы
+    myMap.events.add('click', function (e) {
+        const coords = e.get('coords'); 
+        const latField = document.getElementById("addLat");
+        const lngField = document.getElementById("addLng");
+        
+        if (latField && lngField) {
+            latField.value = coords[0].toFixed(4);
+            lngField.value = coords[1].toFixed(4);
             
-            if (latField && lngField) {
-                latField.value = coords[0].toFixed(4);
-                lngField.value = coords[1].toFixed(4);
-                
-                openAddPointModal(); // Автоматически открываем модалку для оформления
-                
-                const helper = document.getElementById("coordinateHelperText");
-                if (helper) {
-                    helper.innerText = `🎯 Координаты пойманы: ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`;
-                    helper.className = "text-[11px] text-emerald-400 mt-0.5 uppercase font-bold animate-pulse";
-                }
+            openAddPointModal(); 
+            
+            const helper = document.getElementById("coordinateHelperText");
+            if (helper) {
+                helper.innerText = `🎯 Координаты пойманы: ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`;
+                helper.className = "text-[11px] text-emerald-400 mt-0.5 uppercase font-bold animate-pulse";
             }
-        });
+        }
+    });
 
-        // Вешаем слушатели событий фильтрации интерфейса
-        document.getElementById("searchQuery").addEventListener("input", renderApp);
-        document.getElementById("filterStatus").addEventListener("change", renderApp);
-        document.getElementById("filterType").addEventListener("change", renderApp);
+    // Вешаем слушатели событий фильтрации интерфейса
+    document.getElementById("searchQuery").addEventListener("input", renderApp);
+    document.getElementById("filterStatus").addEventListener("change", renderApp);
+    document.getElementById("filterType").addEventListener("change", renderApp);
 
-        // Первичные проверки сессии и загрузка
-        await checkBackendSession();
-        await loadPointsFromServer();
-    } catch (err) {
-        console.error("Ошибка инициализации Yandex Map:", err);
-    }
+    // Первичные проверки сессии и загрузка
+    await checkBackendSession();
+    await loadPointsFromServer();
 }
 
-// Загрузка точек с авто-инициализацией базы данных
+// Загрузка точек с авто-инициализацией базы данных (в случае сброса сервера Render)
 async function loadPointsFromServer() {
     try {
         let response = await fetch(`${BACKEND_URL}/api/sources`);
         loadedSources = await response.json();
 
-        // СИНХРОНИЗАЦИЯ: Если бэкенд пуст, отправляем массив initialSources из data.js
+        // СИНХРОНИЗАЦИЯ: Если бэкенд чистый, отправляем массив initialSources из data.js
         if (loadedSources.length === 0 && typeof initialSources !== 'undefined' && initialSources.length > 0) {
             await fetch(`${BACKEND_URL}/api/sources/sync`, {
                 method: 'POST',
@@ -251,7 +247,7 @@ async function handleCreatePoint(event) {
         });
 
         if (response.ok) {
-            alert("Исследование успешно оплачено и добавлено в очередь модерации!");
+            alert("Источник успешно добавлен в очередь на анализ!");
             closeAddPointModal();
             event.target.reset();
             
@@ -321,7 +317,7 @@ function renderModerationQueue() {
     `).join('');
 }
 
-// ФИЧА 2: Открытие и наполнение формы быстрого редактирования
+// ФИЧА 2: Наполнение формы быстрого редактирования
 function startEditingSource(id) {
     const item = loadedSources.find(p => p.id === id);
     if (!item) return;
@@ -340,7 +336,7 @@ function startEditingSource(id) {
     document.getElementById("editImpurities").value = item.impurities;
 }
 
-// ФИЧА 2: Отправка отредактированных модератором данных на бэкенд
+// ФИЧА 2: Отправка отредактированных данных
 async function submitUpdatedSource(event) {
     event.preventDefault();
     
