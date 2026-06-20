@@ -130,32 +130,6 @@ app.post('/api/auth/register', (req, res) => {
     res.json({ success: true, message: "Регистрация прошла успешно!" });
 });
 
-// Редактирование параметров источника модератором
-app.post('/api/sources/update', (req, res) => {
-    const { id, name, type, location, ph, mineralization, conductivity, hardness, temp, impurities } = req.body;
-    
-    const sourceIndex = waterSourcesDatabase.findIndex(item => item.id === parseInt(id));
-    
-    if (sourceIndex === -1) {
-        return res.status(404).json({ success: false, message: "Источник не найден" });
-    }
-
-    // Обновляем поля
-    waterSourcesDatabase[sourceIndex] = {
-        ...waterSourcesDatabase[sourceIndex],
-        name: name || waterSourcesDatabase[sourceIndex].name,
-        type: type || waterSourcesDatabase[sourceIndex].type,
-        location: location || waterSourcesDatabase[sourceIndex].location,
-        ph: parseFloat(ph) || waterSourcesDatabase[sourceIndex].ph,
-        mineralization: parseInt(mineralization) || waterSourcesDatabase[sourceIndex].mineralization,
-        conductivity: parseInt(conductivity) || waterSourcesDatabase[sourceIndex].conductivity,
-        hardness: parseFloat(hardness) || waterSourcesDatabase[sourceIndex].hardness,
-        temp: parseInt(temp) || waterSourcesDatabase[sourceIndex].temp,
-        impurities: impurities || waterSourcesDatabase[sourceIndex].impurities
-    };
-
-    res.json({ success: true, message: "Данные источника успешно обновлены!", data: waterSourcesDatabase[sourceIndex] });
-});
 
 // Проверка сессии
 app.get('/api/auth/me', (req, res) => {
@@ -175,7 +149,31 @@ app.get('/api/auth/me', (req, res) => {
         }
     });
 });
+// Редактирование параметров источника модератором
+app.post('/api/sources/update', (req, res) => {
+    const { id, name, location, ph, mineralization, conductivity, hardness, temp, impurities } = req.body;
+    
+    const sourceIndex = waterSourcesDatabase.findIndex(item => item.id === parseInt(id));
+    
+    if (sourceIndex === -1) {
+        return res.status(404).json({ success: false, message: "Источник не найден" });
+    }
 
+    // Обновляем поля, сохраняя старые, если новые не переданы
+    waterSourcesDatabase[sourceIndex] = {
+        ...waterSourcesDatabase[sourceIndex],
+        name: name || waterSourcesDatabase[sourceIndex].name,
+        location: location || waterSourcesDatabase[sourceIndex].location,
+        ph: parseFloat(ph) || waterSourcesDatabase[sourceIndex].ph,
+        mineralization: parseInt(mineralization) || waterSourcesDatabase[sourceIndex].mineralization,
+        conductivity: parseInt(conductivity) || waterSourcesDatabase[sourceIndex].conductivity,
+        hardness: parseFloat(hardness) || waterSourcesDatabase[sourceIndex].hardness,
+        temp: parseInt(temp) || waterSourcesDatabase[sourceIndex].temp,
+        impurities: impurities || waterSourcesDatabase[sourceIndex].impurities
+    };
+
+    res.json({ success: true, message: "Данные источника успешно обновлены!", data: waterSourcesDatabase[sourceIndex] });
+});
 app.listen(PORT, () => {
     console.log(`Сервер запущен на порту ${PORT}`);
 });
